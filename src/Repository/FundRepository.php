@@ -60,10 +60,12 @@ class FundRepository extends ServiceEntityRepository
     public function findByNameAndPeriod(int $userId, string $fundName, ?\DateTimeInterface $startDate)
     {
         $qb = $this->createQueryBuilder('f')
+            ->innerJoin('f.navId', 'n')
+            ->addSelect('n')  
             ->where('f.userId = :userId')
             ->setParameter('userId', $userId);
 
-        if ($fundName !== null) {
+        if ($fundName !== null && $fundName !== 'ALL') {
             $qb->andWhere('f.fundName = :name')
             ->setParameter('name', $fundName);
         }
@@ -84,6 +86,8 @@ class FundRepository extends ServiceEntityRepository
     public function findByUserId(int $userId, ?string $sortField = null, string $sortOrder = 'ASC')
     {
         $qb = $this->createQueryBuilder('f')
+                ->innerJoin('f.navId', 'n')
+                ->addSelect('n')  
                 ->where('f.userId = :userId')
                 ->setParameter('userId', $userId);
 

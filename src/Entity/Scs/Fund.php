@@ -106,13 +106,15 @@ class Fund
      */
     private $userId;
 
-
-    // /**
-    //  * @var int
-    //  *
-    //  * @ORM\Column(name="nav_id", type="integer", nullable=false)
-    //  */
-    // private $navId;
+    /**
+     * @var \NavFunds
+     *
+     * @ORM\ManyToOne(targetEntity="NavFunds")
+     * @ORM\JoinColumns({
+     *   @ORM\JoinColumn(name="nav_id", referencedColumnName="id")
+     * })
+     */
+    private $navId;
 
     public function getId(): ?int
     {
@@ -212,6 +214,20 @@ class Fund
     public function setUserId(?int $userId): static
     {
         $this->userId = $userId;
+
+        return $this;
+    }
+
+    
+
+    public function getNavId(): ?NavFunds
+    {
+        return $this->navId;
+    }
+
+    public function setNavId(?NavFunds $navId): static
+    {
+        $this->navId = $navId;
 
         return $this;
     }

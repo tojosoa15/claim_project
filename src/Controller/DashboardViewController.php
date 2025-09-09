@@ -145,6 +145,7 @@ class DashboardViewController extends AbstractController
                         ->findByNameAndPeriod($userId ,$fundName, $startDate);
             }
 
+            // dd($funds);
             foreach ($funds as $f) {
                 // Traitement de "nav"
                 $navParts   = explode(' ', $f->getNav()); // ex: ["MUR", "58.88"]
@@ -172,17 +173,19 @@ class DashboardViewController extends AbstractController
                 }
 
                 $fundFormat[] = [
-                    'id'                => $f->getId(),
-                    'customer_id'       => $f->getUserId(),
+                    'fund_id'           => $f->getId(),
+                    // 'customer_id'       => $f->getUserId(),
                     'reference'         => $f->getReference(),
                     'fund_name'         => $f->getFundName(),
                     'no_of_shares'      => $f->getNoOfShares(),
-                    'nav'               => $f->getNav(),
+                    'nav'               => ($f->getNavId()?->getValue() !== null && $f->getNavId()?->getTypeNav() !== null)
+                            ? $f->getNavId()->getTypeNav().' '.$f->getNavId()->getValue()
+                            : null,
                     'total_amount_ccy'  => $f->getTotalAmountCcy(),
                     'total_amount_mur'  => $f->getTotalAmountMur(),
                     'fund_date'         => $fundDate ? $fundDate->format('Y-m-d') : null,
-                    'avg_nav'           => $avgNav,
-                    'c_name'            => $cName,
+                    'avg_nav'           => $f->getNavId()?->getValue(),
+                    'c_name'            => $f->getNavId()?->getTypeNav(),
                     'month_name'        => $monthNameFr,
                     'month_number'      => $monthNumber,
                     'year'              => $year,
