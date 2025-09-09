@@ -3,6 +3,7 @@
 namespace App\Entity\Scs;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\QueryParameter;
 use App\Controller\DashboardViewController;
@@ -17,15 +18,25 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ApiResource(
     operations: [
+        // List of funds with performance
         new GetCollection(
-            uriTemplate: '/funds',
-            controller: DashboardViewController::class . '::getAllFundsByCustomer',
+            uriTemplate: '/api/funds',
+            controller: DashboardViewController::class . '::getListFundsPerformance',
             parameters: [ 
-                // 'id' => new QueryParameter(),
+                'userId'    => new QueryParameter(),
                 'fundName'  => new QueryParameter(),
                 'period'    => new QueryParameter()
             ]
         ),    
+        // Nav and last valuation date
+        new Get(
+            uriTemplate: '/api/last-valuation-date',
+            controller: DashboardViewController::class . '::getNavLastValuationDate',
+            parameters: [ 
+                'userId'    => new QueryParameter(),
+                'sortBy'    => new QueryParameter()
+            ]
+        )
     ],
 )]
 class Fund
@@ -87,6 +98,21 @@ class Fund
      * @ORM\Column(name="fund_date", type="datetime", nullable=false, options={"default"="CURRENT_TIMESTAMP"})
      */
     private $fundDate = 'CURRENT_TIMESTAMP';
+
+    /**
+     * @var int
+     *
+     * @ORM\Column(name="user_id", type="integer", nullable=false)
+     */
+    private $userId;
+
+
+    // /**
+    //  * @var int
+    //  *
+    //  * @ORM\Column(name="nav_id", type="integer", nullable=false)
+    //  */
+    // private $navId;
 
     public function getId(): ?int
     {
@@ -173,6 +199,19 @@ class Fund
     public function setFundDate(\DateTime $fundDate): static
     {
         $this->fundDate = $fundDate;
+
+        return $this;
+    }
+
+
+    public function getUserId(): ?int
+    {
+        return $this->userId;
+    }
+
+    public function setUserId(?int $userId): static
+    {
+        $this->userId = $userId;
 
         return $this;
     }

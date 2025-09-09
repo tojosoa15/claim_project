@@ -18,8 +18,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ApiResource(
     operations: [
         new GetCollection(
-            uriTemplate: '/nav-funds',
-            controller: DashboardViewController::class . '::getAllNavFunds',
+            uriTemplate: '/api/nav-funds',
+            controller: DashboardViewController::class . '::getNavOfTheFunds',
             // parameters: [ 
             //     'id' => new QueryParameter()
             // ]

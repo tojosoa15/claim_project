@@ -4,6 +4,7 @@ namespace App\Entity\Scs;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\QueryParameter;
 use App\Controller\DashboardViewController;
 use App\Repository\ForexRateRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -18,8 +19,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ApiResource(
     operations: [
         new GetCollection(
-            uriTemplate: '/forex-rates',
-            controller: DashboardViewController::class . '::getForexRates',
+            uriTemplate: '/api/forex-rates',
+            controller: DashboardViewController::class . '::getAllForexRates',
             // parameters: [ 
             //     'id' => new QueryParameter()
             // ]

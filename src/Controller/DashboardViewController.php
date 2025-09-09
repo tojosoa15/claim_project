@@ -32,7 +32,7 @@ class DashboardViewController extends AbstractController
      * @param Request $request
      * @return JsonResponse
      */
-    public function getAllNavFunds(Request $request): JsonResponse
+    public function getNavOfTheFunds(Request $request): JsonResponse
     {
         $navFundsFormat = [];
 
@@ -42,8 +42,8 @@ class DashboardViewController extends AbstractController
             foreach ($navFunds as $nav) {
                 $navFundsFormat[] = [
                     'id'        => $nav->getId(),
-                    'codeName'  => $nav->getCodeName(),
-                    'typeNav'   => $nav->getTypeNav(),
+                    'code_name' => $nav->getCodeName(),
+                    'type_nav'  => $nav->getTypeNav(),
                     'value'     => $nav->getValue()
                 ];
             }
@@ -58,9 +58,9 @@ class DashboardViewController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(
                 [
-                    'status' =>  'error',
-                    'code'  => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
-                    'message' => $e->getMessage()
+                    'status'    =>  'error',
+                    'code'      => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
+                    'message'   => $e->getMessage()
                 ],
                 JsonResponse::HTTP_INTERNAL_SERVER_ERROR
             );
@@ -73,18 +73,46 @@ class DashboardViewController extends AbstractController
      * @param Request $request
      * @return JsonResponse
      */
-    public function getAllFundsByCustomer(Request $request): JsonResponse
+    public function getListFundsPerformance(Request $request): JsonResponse
     {
         $fundFormat = [];
-        $lastDate   = null;
+        $lastFund   = null;
         $params     = $request->query->all();
+        $userId     = $params['userId'] ?? null;    
         $fundName   = $params['fundName'] ?? null;    
         $period     = $params['period'] ?? null;
 
+        if (empty($userId ) || $userId  === null) {
+            return new JsonResponse(
+                [
+                    'status'    => 'error',
+                    'code'      => JsonResponse::HTTP_BAD_REQUEST,
+                    'message'   => 'userId parameter is required'
+                ],
+                JsonResponse::HTTP_BAD_REQUEST
+            );
+        }
+
         try {
+            $sortBy     = $params['sortBy'] ?? null;
+            $sortField  = null;
+            $sortOrder  = 'ASC';
+
+            if ($sortBy) {
+                // exemple: fundName_DESC
+                $parts      = explode('-', $sortBy);
+                $sortField  = $parts[0] ?? null;
+                $sortOrder  = strtoupper($parts[1] ?? 'ASC');
+
+                // sécuriser la direction
+                if (!in_array($sortOrder, ['ASC', 'DESC'])) {
+                    $sortOrder = 'ASC';
+                }
+            }
+
             // Aucun paramètre renseigné -> retourner tout
             if ((empty($fundName) || $fundName === null) && (empty($period) || $period === null)) {
-                $funds = $this->em->getRepository(Fund::class)->findAll();
+                $funds = $this->em->getRepository(Fund::class)->findByUserId($userId, $sortField, $sortOrder);
                 // Seulement un des deux est renseigné -> erreur
             } elseif ((empty($fundName) || $fundName === null) xor (empty($period) || $period === null)) {
                 throw new \InvalidArgumentException("You must fill in both ‘fundName’ and ‘period’.");
@@ -111,12 +139,10 @@ class DashboardViewController extends AbstractController
                     case 'ALL':
                     default:
                         $startDate = null; // pas de limite
-                }
-
-                // dd($startDate);
+                }   
 
                 $funds = $this->em->getRepository(Fund::class)
-                        ->findByNameAndPeriod($fundName, $startDate);
+                        ->findByNameAndPeriod($userId ,$fundName, $startDate);
             }
 
             foreach ($funds as $f) {
@@ -137,35 +163,51 @@ class DashboardViewController extends AbstractController
                     $year           = (int)$dateObj->format('Y'); // 2025
                     $yearMonth      = $dateObj->format('d M Y'); // "04 Sep 2025"
 
-                    // Calcul de la dernière date
-                    if ($lastDate === null || $dateObj > $lastDate) {
-                        $lastDate = clone $dateObj;
+                    // garder le dernier fund
+                    if ($lastFund === null || $dateObj > $lastFund->getFundDate()) {
+                        $lastFund = $f;
                     }
                 } else {
                     $monthNameFr = $monthNumber = $year = $yearMonth = null;
                 }
 
                 $fundFormat[] = [
-                    'id'            => $f->getId(),
-                    'reference'     => $f->getReference(),
-                    'fundName'      => $f->getFundName(),
-                    'noOfShares'    => $f->getNoOfShares(),
-                    'nav'           => $f->getNav(),
-                    'totalAmountCcy'=> $f->getTotalAmountCcy(),
-                    'fundDate'      => $fundDate ? $fundDate->format('Y-m-d') : null,
-                    'avgNav'        => $avgNav,
-                    'cName'         => $cName,
-                    'monthName'     => $monthNameFr,
-                    'monthNumber'   => $monthNumber,
-                    'year'          => $year,
-                    'yearMonth'     => $yearMonth
+                    'id'                => $f->getId(),
+                    'customer_id'       => $f->getUserId(),
+                    'reference'         => $f->getReference(),
+                    'fund_name'         => $f->getFundName(),
+                    'no_of_shares'      => $f->getNoOfShares(),
+                    'nav'               => $f->getNav(),
+                    'total_amount_ccy'  => $f->getTotalAmountCcy(),
+                    'total_amount_mur'  => $f->getTotalAmountMur(),
+                    'fund_date'         => $fundDate ? $fundDate->format('Y-m-d') : null,
+                    'avg_nav'           => $avgNav,
+                    'c_name'            => $cName,
+                    'month_name'        => $monthNameFr,
+                    'month_number'      => $monthNumber,
+                    'year'              => $year,
+                    'year_month'        => $yearMonth
                 ];
+            }
+
+            // maintenant on récupère avg_nav et year_month du dernier enregistrement
+            $lastAvgNav     = null;
+            $lastYearMonth  = null;
+
+            if ($lastFund) {
+                $navParts = explode(' ', $lastFund->getNav());
+                $lastAvgNav = isset($navParts[1]) ? (float) $navParts[1] : null;
+                $lastYearMonth = $lastFund->getFundDate()->format('d M Y');
             }
 
             return new JsonResponse([
                 'status'    => 'success',
                 'code'      => JsonResponse::HTTP_OK,
                 'message'   => 'Successful list of funds by customer.',
+                // 'last'      => [
+                //     'nav_per_share'     => $lastAvgNav,
+                //     'valuation_date'    => $lastYearMonth
+                // ],
                 'data'      => $fundFormat
             ], JsonResponse::HTTP_OK);
 
@@ -188,7 +230,7 @@ class DashboardViewController extends AbstractController
      * @param Request $request
      * @return JsonResponse
      */
-    public function getForexRates(Request $request): JsonResponse
+    public function getAllForexRates(Request $request): JsonResponse
     {
         $forexRateFormat = [];
 
@@ -198,7 +240,7 @@ class DashboardViewController extends AbstractController
             foreach ($forexRate as $nav) {
                 $forexRateFormat[] = [
                     'id'        => $nav->getId(),
-                    'codeName'  => $nav->getType(),
+                    'code_name' => $nav->getType(),
                     'value'     => $nav->getValue()
                 ];
             }
@@ -213,13 +255,70 @@ class DashboardViewController extends AbstractController
         } catch (\Exception $e) {
             return new JsonResponse(
                 [
-                    'status' =>  'error',
-                    'code'  => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
-                    'message' => $e->getMessage()
+                    'status'    =>  'error',
+                    'code'      => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
+                    'message'   => $e->getMessage()
                 ],
                 JsonResponse::HTTP_INTERNAL_SERVER_ERROR
             );
         }
     }
+
+   /**
+     * Dernier nav et date de valuation
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getNavLastValuationDate(Request $request): JsonResponse
+    {
+        $userId = $request->query->get('userId');
+
+        if (!$userId) {
+            return $this->json([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_BAD_REQUEST,
+                'message' => 'userId parameter is required',
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $funds = $this->em->getRepository(Fund::class)->findByUserId($userId);
+
+            if (empty($funds)) {
+                return $this->json([
+                    'status'  => 'success',
+                    'code'    => JsonResponse::HTTP_OK,
+                    'message' => 'No funds found for this user.',
+                    'data'    => null,
+                ], JsonResponse::HTTP_OK);
+            }
+
+            // Récupérer le fund avec la date la plus récente
+            $lastFund = array_reduce($funds, function ($carry, $fund) {
+                return ($carry === null || $fund->getFundDate() > $carry->getFundDate())
+                    ? $fund
+                    : $carry;
+            });
+
+            return $this->json([
+                'status'  => 'success',
+                'code'    => JsonResponse::HTTP_OK,
+                'message' => 'Successful Nav and last valuation date.',
+                'data'    => [
+                    'nav_per_share'  => $lastFund->getNav(),
+                    'valuation_date' => $lastFund?->getFundDate()?->format('d M Y'),
+                ],
+            ], JsonResponse::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
+                'message' => $e->getMessage(),
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
 }
