@@ -328,9 +328,12 @@ class ClaimUserDbService
     public function callGetPaiementListByUser(array $params): array
     {
 
-        $sql = "CALL GetPaymentListByUser(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+       /** @var \PDO $pdo */
+        $pdo = $this->connection->getNativeConnection();
 
-        $stmt = $this->connection->prepare($sql);
+        $stmt = $pdo->prepare("CALL GetPaymentListByUser(?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+        
 
         $stmt->bindValue(1, $params['p_email']);
         $stmt->bindValue(2, $params['p_status'] ?? null);
@@ -342,7 +345,20 @@ class ClaimUserDbService
         $stmt->bindValue(8, $params['p_start_date'] ?? null);
         $stmt->bindValue(9, $params['p_end_date'] ?? null);
 
-        return $stmt->executeQuery()->fetchAllAssociative();
+        $stmt->execute();
+
+        $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        if ($stmt->nextRowset()) {
+            $meta = $stmt->fetch(\PDO::FETCH_ASSOC);
+        } else {
+            $meta = [];
+        }
+
+        return array_merge(
+            ['data' => $data],
+            $meta ?: []
+        );
 
     }
 
@@ -396,6 +412,7 @@ class ClaimUserDbService
         foreach ($vehicle_surveis as $vehicle_survey) {
             $data['vehicle_information']  = [
                 'claim_number'              => $vehicle_survey['claim_number'],
+                'name'                      => $vehicle_survey['name'],
                 'make'                      => $vehicle_survey['make'],
                 'model'                     => $vehicle_survey['model'],
                 'cc'                        => $vehicle_survey['cc'],
@@ -470,11 +487,38 @@ class ClaimUserDbService
             ];
         }
 
+
         // 4. Additional labour details
         if ($stmt->nextRowset()) {
             $data['additional_labour_details'] = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         }
 
+        //Total
+        if ($stmt->nextRowset()) {
+        $totals = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if ($totals) {
+            $data['grand_total'] = [
+                'part' => [
+                    'cost_part'     => (float)$totals['cost_part'],
+                    'discount_part' => (float)$totals['discount_part'],
+                    'vat_part'      => (float)$totals['vat_part'],
+                    'part_total'    => (float)$totals['part_total'],
+                ],
+                'labour' => [
+                    'cost_labour' => (float)$totals['cost_labour'],
+                    'discount_labour'     => (float)$totals['discount_labour'],
+                    'vat_labour'          => (float)$totals['vat_labour'],
+                    'labour_total'        => (float)$totals['labour_total'],
+                ],
+                'overall' => [
+                    'cost_total'     => (float)$totals['cost_total'],
+                    'discount_total' => (float)$totals['discount_total'],
+                    'vat_total'      => (float)$totals['vat_total'],
+                    'total'          => (float)$totals['total'],
+                ],
+            ];
+        }
+    }
         // Retour final
         return $data;
     }
