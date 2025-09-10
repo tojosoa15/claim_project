@@ -214,7 +214,7 @@ class GetClaimDetailsController extends AbstractController
 
         // Validation champs obligatoires etape 3
         if ($data['currentStep'] === 'step_3') {
-            $requiredEstimateFields = ['currentEditor', 'remarks', 'parts', 'labours', 'additionalLabours'];
+            $requiredEstimateFields = ['parts', 'labours', 'additionalLabours'];
 
             foreach ($requiredEstimateFields as $field) {
                 if (empty($data[$field])) {
@@ -283,7 +283,7 @@ class GetClaimDetailsController extends AbstractController
                                 'vat_labour'            => $res['vat_labour'],
                                 'labour_total'          => $res['labour_total']
                             ],
-                            'grand_tatal'   => [
+                            'grand_total'   => [
                                 'cost_total'        => $res['cost_total'],//(float)$res['cost_part'] + (float)$res['hourly_const_labour'],
                                 'discount_total'    => $res['discount_total'],//(float)$res['discount_part'] + (float)$res['discount_labour'],
                                 'vat_total'         => $res['vat_total'],//(float)$res['vat_part'] + (float)$res['vat_labour'],
