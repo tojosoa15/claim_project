@@ -47,7 +47,7 @@ class NavFunds
     /**
      * @var string
      *
-     * @ORM\Column(name="type_nav", type="string", length=45, nullable=false)
+     * @ORM\Column(name="currency", type="string", length=45, nullable=false)
      */
     private $typeNav;
 
