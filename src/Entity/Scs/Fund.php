@@ -33,8 +33,10 @@ use Doctrine\ORM\Mapping as ORM;
             uriTemplate: '/api/last-valuation-date',
             controller: DashboardViewController::class . '::getNavLastValuationDate',
             parameters: [ 
-                'userId'    => new QueryParameter(),
-                'sortBy'    => new QueryParameter()
+                'userId'            => new QueryParameter(),
+                'sortBy'            => new QueryParameter(),
+                'searchRef'         => new QueryParameter(),
+                'searchFundName'    => new QueryParameter(),
             ]
         )
     ],
