@@ -128,7 +128,7 @@ class DashboardViewController extends AbstractController
                             !isset($fundFormat[$fundId]) ||
                             $entity->getNavDate() > new \DateTime($fundFormat[$fundId]['nav']['nav_date'])
                         ) {
-                            $fundFormat[$fundId] = [
+                            $fundFormat[] = [
                                 'fund_id'           => $fundId,
                                 'reference'         => $fund->getReference(),
                                 'fund_name'         => $fund->getFundName(),
