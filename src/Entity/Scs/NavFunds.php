@@ -58,6 +58,23 @@ class NavFunds
      */
     private $value;
 
+    /**
+     * @var \Fund
+     *
+     * @ORM\ManyToOne(targetEntity="Fund")
+     * @ORM\JoinColumns({
+     *   @ORM\JoinColumn(name="fund_id", referencedColumnName="id")
+     * })
+     */
+    private $fundId;
+
+    /**
+     * @var \DateTime
+     *
+     * @ORM\Column(name="nav_date", type="datetime", nullable=false, options={"default"="CURRENT_TIMESTAMP"})
+     */
+    private $navDate = 'CURRENT_TIMESTAMP';
+
     public function getId(): ?int
     {
         return $this->id;
@@ -98,6 +115,31 @@ class NavFunds
 
         return $this;
     }
+
+     public function getNavDate(): ?\DateTime
+    {
+        return $this->navDate;
+    }
+
+    public function setNavDate(\DateTime $navDate): static
+    {
+        $this->navDate = $navDate;
+
+        return $this;
+    }
+
+     public function getFundId(): ?Fund
+    {
+        return $this->fundId;
+    }
+
+    public function setFundId(?Fund $fundId): static
+    {
+        $this->fundId = $fundId;
+
+        return $this;
+    }
+
 
 
 }

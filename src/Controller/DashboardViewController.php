@@ -76,6 +76,7 @@ class DashboardViewController extends AbstractController
     public function getListFundsPerformance(Request $request): JsonResponse
     {
         $fundFormat     = [];
+        $allNavs        = [];
         $lastFund       = null;
         $params         = $request->query->all();
         $userId         = $params['userId'] ?? null;    
@@ -115,7 +116,46 @@ class DashboardViewController extends AbstractController
             // Aucun paramètre renseigné -> retourner tout
             if ((empty($fundName) || $fundName === null) && (empty($period) || $period === null)) {
                 $funds = $this->em->getRepository(Fund::class)->findByUserId($userId, $sortField, $sortOrder, $searchRef, $searchFundName);
-                // Seulement un des deux est renseigné -> erreur
+                
+                // Seulement pour la liste 
+                foreach ($funds as $entity) {
+                    if ($entity instanceof \App\Entity\Scs\NavFunds) {
+                        $fund = $entity->getFundId();
+                        $fundId = $fund->getId();
+
+                        // Si pas encore défini ou si ce nav est plus récent que le précédent
+                        if (
+                            !isset($fundFormat[$fundId]) ||
+                            $entity->getNavDate() > new \DateTime($fundFormat[$fundId]['nav']['nav_date'])
+                        ) {
+                            $fundFormat[$fundId] = [
+                                'fund_id'           => $fundId,
+                                'reference'         => $fund->getReference(),
+                                'fund_name'         => $fund->getFundName(),
+                                'no_of_shares'      => $fund->getNoOfShares(),
+                                'total_amount_ccy'  => $fund->getTotalAmountCcy(),
+                                'total_amount_mur'  => $fund->getTotalAmountMur(),
+                                // 'nav_id'            => $entity->getId(),
+                                'avg_nav'           => $entity->getValue(),
+                                'c_name'            => $entity->getTypeNav(),
+                                'nav'               => $entity->getTypeNav().' '.$entity->getValue(),
+                                'nav_date'          => $entity->getNavDate()?->format('Y-m-d'),
+                                'month_name'        => $entity->getNavDate()?->format('F'),
+                                'month_number'      => $entity->getNavDate()?->format('m'),
+                                'year'              => $entity->getNavDate()?->format('Y'),
+                                'year_month'        => $entity->getNavDate()?->format('d-M-Y')
+                            ];
+                        }
+                    }
+                }
+
+                return new JsonResponse([
+                    'status'    => 'success',
+                    'code'      => JsonResponse::HTTP_OK,
+                    'message'   => 'Successful list of funds by customer.',
+                    'data'      => $fundFormat
+                ], JsonResponse::HTTP_OK);
+
             } elseif ((empty($fundName) || $fundName === null) xor (empty($period) || $period === null)) {
                 throw new \InvalidArgumentException("You must fill in both ‘fundName’ and ‘period’.");
 
@@ -145,76 +185,39 @@ class DashboardViewController extends AbstractController
 
                 $funds = $this->em->getRepository(Fund::class)
                         ->findByNameAndPeriod($userId ,$fundName, $startDate);
-            }
 
-            // dd($funds);
-            foreach ($funds as $f) {
-                // Traitement de "nav"
-                $navParts   = explode(' ', $f->getNav()); // ex: ["MUR", "58.88"]
-                $cName      = $navParts[0] ?? null;
-                $avgNav     = isset($navParts[1]) ? (float) $navParts[1] : null;
-
-                // Traitement de "fundDate"
-                $fundDate   = $f->getFundDate();
-
-                if ($fundDate) {
-                    $dateObj        = $fundDate; // si c'est déjà un DateTime
-                    $monthName      = $dateObj->format('F'); // "September"
-                    setlocale(LC_TIME, 'fr_FR.UTF-8'); // pour avoir le mois en français
-                    $monthNameFr    = strftime('%B', $dateObj->getTimestamp()); // "septembre"
-                    $monthNumber    = (int)$dateObj->format('m'); // 9
-                    $year           = (int)$dateObj->format('Y'); // 2025
-                    $yearMonth      = $dateObj->format('d M Y'); // "04 Sep 2025"
-
-                    // garder le dernier fund
-                    if ($lastFund === null || $dateObj > $lastFund->getFundDate()) {
-                        $lastFund = $f;
+                // Liste des navs
+                foreach ($funds as $entity) {
+                    if ($entity instanceof \App\Entity\Scs\NavFunds) {
+                        $fund = $entity->getFundId();
+                        $fundId = $fund->getId();
+                        // --- Format pour TOUTES les NAVs ---
+                        $allNavs[] = [
+                            'fund_id'           => $fundId,
+                            'reference'         => $fund->getReference(),
+                            'fund_name'         => $fund->getFundName(),
+                            'no_of_shares'      => $fund->getNoOfShares(),
+                            'total_amount_ccy'  => $fund->getTotalAmountCcy(),
+                            'total_amount_mur'  => $fund->getTotalAmountMur(),
+                            'avg_nav'           => $entity->getValue(),
+                            'c_name'            => $entity->getTypeNav(),
+                            'nav'               => $entity->getTypeNav().' '.$entity->getValue(),
+                            'nav_date'          => $entity->getNavDate()?->format('Y-m-d'),
+                            'month_name'        => $entity->getNavDate()?->format('F'),
+                            'month_number'      => $entity->getNavDate()?->format('m'),
+                            'year'              => $entity->getNavDate()?->format('Y'),
+                            'year_month'        => $entity->getNavDate()?->format('d-M-Y'),
+                        ];
                     }
-                } else {
-                    $monthNameFr = $monthNumber = $year = $yearMonth = null;
                 }
 
-                $fundFormat[] = [
-                    'fund_id'           => $f->getId(),
-                    // 'customer_id'       => $f->getUserId(),
-                    'reference'         => $f->getReference(),
-                    'fund_name'         => $f->getFundName(),
-                    'no_of_shares'      => $f->getNoOfShares(),
-                    'nav'               => ($f->getNavId()?->getValue() !== null && $f->getNavId()?->getTypeNav() !== null)
-                            ? $f->getNavId()->getTypeNav().' '.$f->getNavId()->getValue()
-                            : null,
-                    'total_amount_ccy'  => $f->getTotalAmountCcy(),
-                    'total_amount_mur'  => $f->getTotalAmountMur(),
-                    'fund_date'         => $fundDate ? $fundDate->format('Y-m-d') : null,
-                    'avg_nav'           => $f->getNavId()?->getValue(),
-                    'c_name'            => $f->getNavId()?->getTypeNav(),
-                    'month_name'        => $monthNameFr,
-                    'month_number'      => $monthNumber,
-                    'year'              => $year,
-                    'year_month'        => $yearMonth
-                ];
+                return new JsonResponse([
+                    'status'    => 'success',
+                    'code'      => JsonResponse::HTTP_OK,
+                    'message'   => 'Successful list of funds by customer.',
+                    'data'      => $allNavs
+                ], JsonResponse::HTTP_OK);
             }
-
-            // maintenant on récupère avg_nav et year_month du dernier enregistrement
-            $lastAvgNav     = null;
-            $lastYearMonth  = null;
-
-            if ($lastFund) {
-                $navParts = explode(' ', $lastFund->getNav());
-                $lastAvgNav = isset($navParts[1]) ? (float) $navParts[1] : null;
-                $lastYearMonth = $lastFund->getFundDate()->format('d M Y');
-            }
-
-            return new JsonResponse([
-                'status'    => 'success',
-                'code'      => JsonResponse::HTTP_OK,
-                'message'   => 'Successful list of funds by customer.',
-                // 'last'      => [
-                //     'nav_per_share'     => $lastAvgNav,
-                //     'valuation_date'    => $lastYearMonth
-                // ],
-                'data'      => $fundFormat
-            ], JsonResponse::HTTP_OK);
 
         } catch (\Exception $e) {
             return new JsonResponse(

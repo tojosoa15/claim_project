@@ -73,12 +73,12 @@ class Fund
      */
     private $noOfShares;
 
-    /**
-     * @var string
-     *
-     * @ORM\Column(name="nav", type="string", length=100, nullable=false)
-     */
-    private $nav;
+    // /**
+    //  * @var string
+    //  *
+    //  * @ORM\Column(name="nav", type="string", length=100, nullable=false)
+    //  */
+    // private $nav;
 
     /**
      * @var string
@@ -97,7 +97,7 @@ class Fund
     /**
      * @var \DateTime
      *
-     * @ORM\Column(name="fund_date", type="datetime", nullable=false, options={"default"="CURRENT_TIMESTAMP"})
+     * @ORM\Column(name="created_at", type="datetime", nullable=false, options={"default"="CURRENT_TIMESTAMP"})
      */
     private $fundDate = 'CURRENT_TIMESTAMP';
 
@@ -108,15 +108,15 @@ class Fund
      */
     private $userId;
 
-    /**
-     * @var \NavFunds
-     *
-     * @ORM\ManyToOne(targetEntity="NavFunds")
-     * @ORM\JoinColumns({
-     *   @ORM\JoinColumn(name="nav_id", referencedColumnName="id")
-     * })
-     */
-    private $navId;
+    // /**
+    //  * @var \NavFunds
+    //  *
+    //  * @ORM\ManyToOne(targetEntity="NavFunds")
+    //  * @ORM\JoinColumns({
+    //  *   @ORM\JoinColumn(name="nav_id", referencedColumnName="id")
+    //  * })
+    //  */
+    // private $navId;
 
     public function getId(): ?int
     {
@@ -159,17 +159,17 @@ class Fund
         return $this;
     }
 
-    public function getNav(): ?string
-    {
-        return $this->nav;
-    }
+    // public function getNav(): ?string
+    // {
+    //     return $this->nav;
+    // }
 
-    public function setNav(string $nav): static
-    {
-        $this->nav = $nav;
+    // public function setNav(string $nav): static
+    // {
+    //     $this->nav = $nav;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getTotalAmountCcy(): ?string
     {
@@ -220,19 +220,17 @@ class Fund
         return $this;
     }
 
-    
+    // public function getNavId(): ?NavFunds
+    // {
+    //     return $this->navId;
+    // }
 
-    public function getNavId(): ?NavFunds
-    {
-        return $this->navId;
-    }
+    // public function setNavId(?NavFunds $navId): static
+    // {
+    //     $this->navId = $navId;
 
-    public function setNavId(?NavFunds $navId): static
-    {
-        $this->navId = $navId;
-
-        return $this;
-    }
+    //     return $this;
+    // }
 
 
 }

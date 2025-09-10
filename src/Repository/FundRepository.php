@@ -57,28 +57,41 @@ class FundRepository extends ServiceEntityRepository
     /**
      * Récupérer les funds par nom et période (optionnelle)
      */
-    public function findByNameAndPeriod(int $userId, string $fundName, ?\DateTimeInterface $startDate)
-    {
+    public function findByNameAndPeriod(
+        int $userId,
+        ?string $fundName,
+        ?\DateTimeInterface $startDate,
+        ?\DateTimeInterface $endDate = null
+    ) {
         $qb = $this->createQueryBuilder('f')
-            ->innerJoin('f.navId', 'n')
-            ->addSelect('n')  
-            ->where('f.userId = :userId')
+            ->innerJoin('App\Entity\Scs\NavFunds', 'n', 'WITH', 'n.fundId = f.id')
+            ->addSelect('n')
+            ->andWhere('f.userId = :userId')
             ->setParameter('userId', $userId);
 
-        if ($fundName !== null && $fundName !== 'ALL') {
+        // Filtrer par fund name (sauf si ALL)
+        if ($fundName !== null && strtoupper($fundName) !== 'ALL') {
             $qb->andWhere('f.fundName = :name')
             ->setParameter('name', $fundName);
         }
 
+        // Filtrer par date de début
         if ($startDate !== null) {
-            $qb->andWhere('f.fundDate >= :startDate')
+            $qb->andWhere('n.navDate >= :startDate')
             ->setParameter('startDate', $startDate);
         }
 
-        return $qb->orderBy('f.fundDate', 'ASC')
+        // Optionnel : filtrer aussi par date de fin si fourni
+        if ($endDate !== null) {
+            $qb->andWhere('n.navDate <= :endDate')
+            ->setParameter('endDate', $endDate);
+        }
+
+        return $qb->orderBy('n.navDate', 'ASC')
                 ->getQuery()
                 ->getResult();
     }
+
 
     /**
      * Récupérer les funds par userId
@@ -91,11 +104,23 @@ class FundRepository extends ServiceEntityRepository
         ?string $fundName = null
     )
     {
+        // $qb = $this->createQueryBuilder('f')
+        //         // ->innerJoin('f.navId', 'n')
+        //         // ->addSelect('n')  
+        //         ->innerJoin('App\Entity\Scs\NavFunds', 'n', 'WITH', 'n.fundId = f.id')
+        //         ->addSelect('n')
+        //         ->where('f.userId = :userId')
+        //         ->setParameter('userId', $userId);
         $qb = $this->createQueryBuilder('f')
-                ->innerJoin('f.navId', 'n')
-                ->addSelect('n')  
-                ->where('f.userId = :userId')
-                ->setParameter('userId', $userId);
+            ->innerJoin('App\Entity\Scs\NavFunds', 'n', 'WITH', 'n.fundId = f.id')
+            ->andWhere('f.userId = :userId')
+            ->setParameter('userId', $userId)
+            ->andWhere('n.navDate = (
+                SELECT MAX(n2.navDate)
+                FROM App\Entity\Scs\NavFunds n2
+                WHERE n2.fundId = f.id
+            )')
+            ->addSelect('n');
         
         // --- Filtres optionnels ---
         if ($reference !== null && $reference !== '') {
@@ -113,10 +138,9 @@ class FundRepository extends ServiceEntityRepository
             'reference'       => 'f.reference',
             'fundName'        => 'f.fundName',
             'noOfShares'      => 'f.noOfShares',
-            'nav'             => 'f.nav',
+            'nav'             => 'n.value',
             'totalAmountCcy'  => 'f.totalAmountCcy',
-            'totalAmountMur'  => 'f.totalAmountMur',
-            'fundDate'        => 'f.fundDate'
+            'totalAmountMur'  => 'f.totalAmountMur'
         ];
         
 
