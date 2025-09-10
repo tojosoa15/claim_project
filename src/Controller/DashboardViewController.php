@@ -75,12 +75,14 @@ class DashboardViewController extends AbstractController
      */
     public function getListFundsPerformance(Request $request): JsonResponse
     {
-        $fundFormat = [];
-        $lastFund   = null;
-        $params     = $request->query->all();
-        $userId     = $params['userId'] ?? null;    
-        $fundName   = $params['fundName'] ?? null;    
-        $period     = $params['period'] ?? null;
+        $fundFormat     = [];
+        $lastFund       = null;
+        $params         = $request->query->all();
+        $userId         = $params['userId'] ?? null;    
+        $fundName       = $params['fundName'] ?? null;    
+        $period         = $params['period'] ?? null;
+        $searchRef      = $params['searchRef'] ?? null;
+        $searchFundName = $params['searchFundName'] ?? null;
 
         if (empty($userId ) || $userId  === null) {
             return new JsonResponse(
@@ -112,7 +114,7 @@ class DashboardViewController extends AbstractController
 
             // Aucun paramètre renseigné -> retourner tout
             if ((empty($fundName) || $fundName === null) && (empty($period) || $period === null)) {
-                $funds = $this->em->getRepository(Fund::class)->findByUserId($userId, $sortField, $sortOrder);
+                $funds = $this->em->getRepository(Fund::class)->findByUserId($userId, $sortField, $sortOrder, $searchRef, $searchFundName);
                 // Seulement un des deux est renseigné -> erreur
             } elseif ((empty($fundName) || $fundName === null) xor (empty($period) || $period === null)) {
                 throw new \InvalidArgumentException("You must fill in both ‘fundName’ and ‘period’.");

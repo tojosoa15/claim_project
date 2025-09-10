@@ -83,13 +83,30 @@ class FundRepository extends ServiceEntityRepository
     /**
      * Récupérer les funds par userId
      */
-    public function findByUserId(int $userId, ?string $sortField = null, string $sortOrder = 'ASC')
+    public function findByUserId(
+        int $userId, 
+        ?string $sortField = null, 
+        string $sortOrder = 'ASC',
+        ?string $reference = null,
+        ?string $fundName = null
+    )
     {
         $qb = $this->createQueryBuilder('f')
                 ->innerJoin('f.navId', 'n')
                 ->addSelect('n')  
                 ->where('f.userId = :userId')
                 ->setParameter('userId', $userId);
+        
+        // --- Filtres optionnels ---
+        if ($reference !== null && $reference !== '') {
+            $qb->andWhere('f.reference LIKE :reference')
+            ->setParameter('reference', '%' . $reference . '%');
+        }
+
+        if ($fundName !== null && $fundName !== '') {
+            $qb->andWhere('f.fundName LIKE :fundName')
+            ->setParameter('fundName', '%' . $fundName . '%');
+        }
 
         // mapping des champs autorisés pour le tri
         $allowedSortFields = [
