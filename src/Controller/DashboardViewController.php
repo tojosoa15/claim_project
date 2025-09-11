@@ -235,7 +235,7 @@ class DashboardViewController extends AbstractController
 
     }
 
-     /**
+    /**
      * Liste taux de change
      * 
      * @param Request $request
@@ -305,20 +305,22 @@ class DashboardViewController extends AbstractController
                 ], JsonResponse::HTTP_OK);
             }
 
-            // Récupérer le fund avec la date la plus récente
-            $lastFund = array_reduce($funds, function ($carry, $fund) {
-                return ($carry === null || $fund->getFundDate() > $carry->getFundDate())
-                    ? $fund
+            // Récupérer le fundNav avec la date la plus récente
+            $navsOnly = array_filter($funds, fn($f) => $f instanceof NavFunds);
+
+            $lastNav = array_reduce($navsOnly, function ($carry, NavFunds $nav) {
+                return ($carry === null || $nav->getNavDate() > $carry->getNavDate())
+                    ? $nav
                     : $carry;
             });
-
+            
             return $this->json([
                 'status'  => 'success',
                 'code'    => JsonResponse::HTTP_OK,
                 'message' => 'Successful Nav and last valuation date.',
                 'data'    => [
-                    'nav_per_share'  => $lastFund->getNav(),
-                    'valuation_date' => $lastFund?->getFundDate()?->format('d M Y'),
+                    'nav_per_share'  => $lastNav->getValue(),
+                    'valuation_date' => $lastNav?->getNavDate()?->format('d M Y'),
                 ],
             ], JsonResponse::HTTP_OK);
 
