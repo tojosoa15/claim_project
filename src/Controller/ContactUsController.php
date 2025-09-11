@@ -34,7 +34,7 @@ public function getAllContact(
             'name'     => $bdContact->getName(),
             'email'    => $bdContact->getEmail(),
             'phone'    => $bdContact->getPhone(),
-            'portable' => $bdContact->getPortable()
+            'mobile'   => $bdContact->getPortable()
         ] : null;
 
         $scContactFormat = $scContact ? [
