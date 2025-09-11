@@ -104,13 +104,6 @@ class FundRepository extends ServiceEntityRepository
         ?string $fundName = null
     )
     {
-        // $qb = $this->createQueryBuilder('f')
-        //         // ->innerJoin('f.navId', 'n')
-        //         // ->addSelect('n')  
-        //         ->innerJoin('App\Entity\Scs\NavFunds', 'n', 'WITH', 'n.fundId = f.id')
-        //         ->addSelect('n')
-        //         ->where('f.userId = :userId')
-        //         ->setParameter('userId', $userId);
         $qb = $this->createQueryBuilder('f')
             ->innerJoin('App\Entity\Scs\NavFunds', 'n', 'WITH', 'n.fundId = f.id')
             ->andWhere('f.userId = :userId')

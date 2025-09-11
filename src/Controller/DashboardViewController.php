@@ -115,7 +115,7 @@ class DashboardViewController extends AbstractController
 
             // Aucun paramètre renseigné -> retourner tout
             if ((empty($fundName) || $fundName === null) && (empty($period) || $period === null)) {
-                $funds = $this->em->getRepository(Fund::class)->findByUserId($userId, $sortField, $sortOrder, $searchRef, $searchFundName);
+                $funds = $this->em->getRepository(Fund::class)->findByUserId(intval($userId), $sortField, $sortOrder, $searchRef, $searchFundName);
                 
                 // Seulement pour la liste 
                 foreach ($funds as $entity) {
@@ -184,7 +184,7 @@ class DashboardViewController extends AbstractController
                 }   
 
                 $funds = $this->em->getRepository(Fund::class)
-                        ->findByNameAndPeriod($userId ,$fundName, $startDate);
+                        ->findByNameAndPeriod(intval($userId) ,$fundName, $startDate);
 
                 // Liste des navs
                 foreach ($funds as $entity) {
@@ -291,7 +291,7 @@ class DashboardViewController extends AbstractController
         }
 
         try {
-            $funds = $this->em->getRepository(Fund::class)->findByUserId($userId);
+            $funds = $this->em->getRepository(Fund::class)->findByUserId(intval($userId));
 
             if (empty($funds)) {
                 return $this->json([
