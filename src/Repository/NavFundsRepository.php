@@ -36,9 +36,9 @@ class NavFundsRepository extends ServiceEntityRepository
     public function findLastUniqueByCodeName(): array
     {
         $qb = $this->createQueryBuilder('n')
-            ->orderBy('n.codeName', 'ASC')
-            ->addOrderBy('n.typeNav', 'ASC')
-            ->addOrderBy('n.navDate', 'DESC');
+            ->orderBy('n.navDate', 'DESC')
+            ->addOrderBy('n.codeName', 'ASC')
+            ->addOrderBy('n.typeNav', 'ASC');
 
         $results = $qb->getQuery()->getResult();
 
@@ -46,13 +46,28 @@ class NavFundsRepository extends ServiceEntityRepository
         foreach ($results as $nav) {
             $key = $nav->getCodeName() . '_' . $nav->getTypeNav();
 
-            // si on n’a pas encore pris ce couple code_name + type_nav → on prend le plus récent
+            // on ne garde que le premier (le plus récent grâce au tri DESC)
             if (!isset($grouped[$key])) {
                 $grouped[$key] = $nav;
             }
         }
 
-        return $grouped;
+        // On récupère seulement 7 résultats uniques
+        return array_slice(array_values($grouped), 0, 7);
+    }
+
+    /**
+     * Récupère les 7 dernières entrées de NavFunds
+     *
+     * @return NavFunds[] Liste des 7 dernières entrées de NavFunds
+     */
+    public function findLastSeven(): array
+    {
+        return $this->createQueryBuilder('n')
+            ->orderBy('n.navDate', 'DESC')
+            ->setMaxResults(7)
+            ->getQuery()
+            ->getResult();
     }
 
 

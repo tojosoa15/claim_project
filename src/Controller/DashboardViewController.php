@@ -40,10 +40,10 @@ class DashboardViewController extends AbstractController
         $navFundsFormat = [];
 
         try {
-            // $navFunds = $this->em->getRepository(NavFunds::class)->findAll();
             $lastNavs = $this->em->getRepository(NavFunds::class)->findLastUniqueByCodeName();
 
-           foreach ($lastNavs as $key => $nav) {
+            $navFundsFormat = [];
+            foreach ($lastNavs as $nav) {
                 $navFundsFormat[] = [
                     'id'        => $nav->getId(),
                     'code_name' => $nav->getCodeName(),
