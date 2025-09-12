@@ -21,16 +21,16 @@ class TransactionRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('t')
             ->select(
                 't.id AS transaction_id',
-                'f.id AS fund_id',
-                't.transactionDate AS date',
-                'f.fundName AS fund_name',
-                'f.reference AS sub_account_reference',
-                'tt.name AS transaction_type',
-                't.cnNumber AS cn_number',
-                't.noOfUnits AS no_of_units',
-                't.netAmountInvRedeemed AS net_amount_inv_redeemed',
-                't.currency AS currency',
-                'f.totalAmountMur AS net_amount_mur'
+                        'f.id AS fund_id',
+                        't.transactionDate AS date',
+                        'f.fundName AS fund_name',
+                        'f.reference AS sub_account_reference',
+                        'tt.name AS transaction_type',
+                        't.cnNumber AS cn_number',
+                        't.noOfUnits AS no_of_units',
+                        't.netAmountInvRedeemed AS net_amount_inv_redeemed',
+                        't.currency AS currency',
+                        'f.totalAmountMur AS net_amount_mur'
             )
             ->join('t.fundId', 'f')
             ->join('t.typeId', 'tt')
@@ -77,12 +77,14 @@ class TransactionRepository extends ServiceEntityRepository
 
         $items = $qb->getQuery()->getArrayResult();
 
-        // Count avec les mêmes filtres
+        // Compter total
         $qbCount = clone $qb;
         $qbCount->resetDQLPart('select')
                 ->resetDQLPart('orderBy')
+                ->setFirstResult(null)
+                ->setMaxResults(null)
                 ->select('COUNT(t.id)');
-        $total = $qbCount->getQuery()->getSingleScalarResult();
+        $total = (int) $qbCount->getQuery()->getSingleScalarResult();
 
         // Formatage date
         foreach ($items as &$item) {
@@ -91,11 +93,16 @@ class TransactionRepository extends ServiceEntityRepository
             }
         }
 
+        $totalPages = (int) ceil($total / $limit);
+
         return [
-            'items' => $items,
-            'total' => (int) $total,
-            'page'  => (int) $page,
-            'limit' => (int) $limit,
+            'items'             => $items,
+            'total_transaction' => $total,
+            'total_pages'       => $totalPages,
+            'current_page'      => $page,
+            'previous_page'     => $page > 1 ? $page - 1 : 1,
+            'next_page'         => $page < $totalPages ? $page + 1 : $totalPages,
+            'page_size'         => $limit,
         ];
     }
 
