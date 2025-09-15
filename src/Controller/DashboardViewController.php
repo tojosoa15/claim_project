@@ -198,6 +198,7 @@ class DashboardViewController extends AbstractController
                         $fundId = $fund->getId();
                         // --- Format pour TOUTES les NAVs ---
                         $allNavs[] = [
+                            'id'                => $fund->getId(),
                             'fund_id'           => $fundId,
                             'reference'         => $fund->getReference(),
                             'fund_name'         => $fund->getFundName(),
@@ -212,7 +213,7 @@ class DashboardViewController extends AbstractController
                             'month_number'      => $entity->getNavDate()?->format('m'),
                             'year'              => $entity->getNavDate()?->format('Y'),
                             'year_month'        => $entity->getNavDate()?->format('d-M-Y'),
-                            'color'             => $this->generateColorFromString((string) $entity->getId()) // couleur fixe
+                            'color'             => $this->generateColorFromString((string) $fundId) // couleur fixe
                         ];
                     }
                 }
