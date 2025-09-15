@@ -109,6 +109,40 @@ class AccountInformations implements UserInterface, PasswordAuthenticatedUserInt
     private $backupEmail;
 
     /**
+     * @var \DateTime
+     *
+     * @ORM\Column(name="date_of_birth", type="datetime", nullable=false, options={"default"="CURRENT_TIMESTAMP"})
+     */
+    private $dateOfBirth;
+
+    /**
+     * @var string|null
+     *
+     * @ORM\Column(name="nic", type="string", length=50, nullable=true)
+     */
+    private $nic;
+
+    /**
+     * @var string|null
+     *
+     * @ORM\Column(name="country_of_nationality", type="string", length=50, nullable=true)
+     */
+    private $countryOfNationality;
+
+    /**
+     * @var string|null
+     *
+     * @ORM\Column(name="home_number", type="string", length=50, nullable=true)
+     */
+    private $homeNumber;
+
+    /**
+     * @var \DateTime
+     *
+     * @ORM\Column(name="kyc", type="datetime", nullable=false, options={"default"="CURRENT_TIMESTAMP"})
+     */
+    private $kyc;
+    /**
      * Mot de passe en clair temporaire
      * Non stocké en base
     */
@@ -289,4 +323,61 @@ class AccountInformations implements UserInterface, PasswordAuthenticatedUserInt
         return $this;
     }
 
+     public function getDateOfBirth(): ?\DateTime
+    {
+        return $this->dateOfBirth;
+    }
+
+    public function setDateOfBirth(\DateTime $dateOfBirth): self
+    {
+        $this->dateOfBirth = $dateOfBirth;
+        return $this;
+    }
+
+    public function getNic(): ?string
+    {
+        return $this->nic;
+    }
+
+    public function setNic(string $nic): static
+    {
+        $this->nic = $nic;
+
+        return $this;
+    }
+
+    public function getCountryOfNationality(): ?string
+    {
+        return $this->countryOfNationality;
+    }
+
+    public function setCountryOfNationality(string $countryOfNationality): static
+    {
+        $this->countryOfNationality = $countryOfNationality;
+
+        return $this;
+    }
+
+    public function getHomeNumber(): ?string
+    {
+        return $this->homeNumber;
+    }
+
+    public function setHomeNumber(string $homeNUmber): static
+    {
+        $this->homeNumber = $homeNUmber;
+
+        return $this;
+    }
+
+     public function getKyc(): ?\DateTime
+    {
+        return $this->kyc;
+    }
+
+    public function setKyc(\DateTime $kyc): self
+    {
+        $this->dateOfBirth = $kyc;
+        return $this;
+    }
 }
