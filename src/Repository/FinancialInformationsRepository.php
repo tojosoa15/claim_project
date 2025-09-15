@@ -16,4 +16,10 @@ class FinancialInformationsRepository extends ServiceEntityRepository
         parent::__construct($registry, FinancialInformations::class);
     }
 
+    // FinancialInformationsRepository.php
+    public function findByUserId(int $userId): ?FinancialInformations
+    {
+        return $this->findOneBy(['users' => $userId]);
+    }
+
 }

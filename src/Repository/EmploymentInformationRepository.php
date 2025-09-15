@@ -16,4 +16,10 @@ class EmploymentInformationRepository extends ServiceEntityRepository
         parent::__construct($registry, EmploymentInformation::class);
     }
 
+    // EmploymentInformationsRepository.php
+    public function findByUserId(int $userId): ?EmploymentInformation
+    {
+        return $this->findOneBy(['users' => $userId]);
+    }
+
 }

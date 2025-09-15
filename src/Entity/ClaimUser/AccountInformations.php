@@ -2,13 +2,18 @@
 
 namespace App\Entity\ClaimUser;
 
+use App\Controller\ProfileController;
 use ApiPlatform\Metadata\Get;
 // use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\QueryParameter;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Post;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface; 
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Validator\Constraints as Assert;
+
 
 
 /**
@@ -17,6 +22,24 @@ use Symfony\Component\Validator\Constraints as Assert;
  * @ORM\Table(name="account_informations", uniqueConstraints={@ORM\UniqueConstraint(name="email_address_UNIQUE", columns={"email_address"}), @ORM\UniqueConstraint(name="users_id_UNIQUE", columns={"users_id"})})
  * @ORM\Entity
  */
+
+#[ApiResource(
+    operations: [
+        new GetCollection(
+            uriTemplate: '/api/profile',
+            controller: ProfileController::class . '::getAllProfile',
+            // parameters: [ 
+            //     'id' => new QueryParameter()
+            // ]
+        ), 
+        new Post(
+            uriTemplate: '/api/profile/upload',
+            controller: ProfileController::class . '::uploadProfileImage',
+            deserialize: false,
+            name: 'upload_profile_image'
+        )   
+    ],
+)]
 class AccountInformations implements UserInterface, PasswordAuthenticatedUserInterface
 {
     /**
@@ -142,6 +165,15 @@ class AccountInformations implements UserInterface, PasswordAuthenticatedUserInt
      * @ORM\Column(name="kyc", type="datetime", nullable=false, options={"default"="CURRENT_TIMESTAMP"})
      */
     private $kyc;
+
+    /**
+     * @var string|null
+     *
+     * @ORM\Column(name="profile_image", type="string", length=255, nullable=true)
+     */
+    private $profileImage;
+
+
     /**
      * Mot de passe en clair temporaire
      * Non stocké en base
@@ -378,6 +410,18 @@ class AccountInformations implements UserInterface, PasswordAuthenticatedUserInt
     public function setKyc(\DateTime $kyc): self
     {
         $this->dateOfBirth = $kyc;
+        return $this;
+    }
+
+    
+    public function getProfileImage(): ?string
+    {
+        return $this->profileImage;
+    }
+
+    public function setProfileImage(?string $profileImage): self
+    {
+        $this->profileImage = $profileImage;
         return $this;
     }
 }
