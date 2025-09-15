@@ -58,6 +58,26 @@ class FinancialInformations
     private $swiftCode;
 
     /**
+     * @var string
+     *
+     * @ORM\Column(name="bank_holder_name", type="string", length=50, nullable=false)
+     */
+    private $bankHolderName;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="bank_address", type="string", length=50, nullable=false)
+     */
+    private $bankAddress;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="bank_country", type="string", length=50, nullable=false)
+     */
+    private $bankCountry;
+    /**
      * @var \Users
      *
      * @ORM\ManyToOne(targetEntity="Users")
@@ -128,6 +148,42 @@ class FinancialInformations
     public function setSwiftCode(string $swiftCode): static
     {
         $this->swiftCode = $swiftCode;
+
+        return $this;
+    }
+
+    public function getBankHolderName(): ?string
+    {
+        return $this->bankHolderName;
+    }
+
+    public function setBankHolderName(string $bankHolderName): static
+    {
+        $this->bankHolderName = $bankHolderName;
+
+        return $this;
+    }
+
+    public function getBankAddress(): ?string
+    {
+        return $this->bankAddress;
+    }
+
+    public function setBankAddress(string $bankAddress): static
+    {
+        $this->bankAddress = $bankAddress;
+
+        return $this;
+    }
+
+    public function getBankCountry(): ?string
+    {
+        return $this->bankCountry;
+    }
+
+    public function setBankCountry(string $bankCountry): static
+    {
+        $this->bankCountry = $bankCountry;
 
         return $this;
     }

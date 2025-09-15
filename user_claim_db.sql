@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : mar. 12 août 2025 à 10:53
+-- Généré le : lun. 15 sep. 2025 à 08:28
 -- Version du serveur : 9.1.0
 -- Version de PHP : 8.2.26
 
@@ -189,6 +189,159 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAssignmentList` (IN `p_claims_nu
         ai.business_name,
         a.assignment_date
     ORDER BY a.assignment_date DESC;
+END$$
+
+DROP PROCEDURE IF EXISTS `GetClaimPartialInfo`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetClaimPartialInfo` (IN `p_claim_number` VARCHAR(100), IN `p_email` VARCHAR(100))   BEGIN
+    -- Vérifier l’email
+    IF p_email IS NULL OR p_email = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'L''email est un paramètre obligatoire.';
+    END IF;
+
+    -- Vérifier si l'utilisateur existe
+    IF NOT EXISTS (
+        SELECT 1 FROM account_informations WHERE email_address = p_email
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Aucun utilisateur trouvé avec cet email.';
+    END IF;
+
+    --  Sélection des informations principales du véhicule et claim
+    SELECT
+        CPI.id AS id,
+        CL.name,
+        CPI.claim_number,
+        CPI.make,
+        CPI.model,
+        CPI.cc,
+        CPI.fuel_type,
+        CPI.transmission,
+        CPI.engine_no,
+        CPI.chasis_no,
+        CPI.vehicle_no,
+        VI.color,
+        VI.odometer_reading,
+        VI.is_the_vehicle_total_loss,
+        VI.condition_of_vehicle,
+        VI.place_of_survey,
+        VI.point_of_impact,
+        CPI.garage,
+        CPI.garage_address,
+        CPI.garage_contact_no,
+        CPI.eor_value,
+        SI.invoice_number,
+        SI.survey_type,
+        SI.date_of_survey,
+        SI.time_of_survey,
+        SI.pre_accident_valeur,
+        SI.showroom_price,
+        SI.wrech_value,
+        SI.excess_applicable
+    FROM claim_partial_info CPI
+    INNER JOIN assignment A ON A.claims_number = CPI.claim_number
+    INNER JOIN users U ON A.users_id = U.id
+    INNER JOIN account_informations AI ON AI.users_id = U.id
+    INNER JOIN claims CL ON CL.number = CPI.claim_number
+    LEFT JOIN surveyor_db.survey S ON S.claim_number = CPI.claim_number
+    LEFT JOIN surveyor_db.vehicle_information VI ON VI.verification_id = S.id
+    LEFT JOIN surveyor_db.survey_information SI ON SI.verification_id = S.id
+    WHERE AI.email_address = p_email
+      AND CPI.claim_number = p_claim_number;
+
+    -- Sélection des part_details associés
+    SELECT
+        PD.id AS part_detail_id,
+        PD.part_name,
+        PD.supplier,
+        PD.quantity,
+        PD.quality,
+        PD.cost_part,
+        PD.discount_part,
+        PD.vat_part,
+        PD.part_total
+    FROM garage_db.part_details PD
+    WHERE PD.estimate_of_repair_id IN (
+        SELECT id FROM garage_db.estimate_of_repair WHERE claim_number = p_claim_number
+    );
+
+    -- Sélection des labour_details associés
+    SELECT
+        LD.part_detail_id,
+        LD.eor_or_surveyor,
+        LD.activity,
+        LD.number_of_hours,
+        LD.hourly_cost_labour,
+        LD.discount_labour,
+        LD.vat_labour,
+        LD.labour_total
+    FROM garage_db.labour_details LD
+    WHERE LD.part_detail_id IN (
+        SELECT id FROM garage_db.part_details
+        WHERE estimate_of_repair_id IN (
+            SELECT id FROM garage_db.estimate_of_repair WHERE claim_number = p_claim_number
+        )
+    );
+
+    -- Sélection des additional_labour_details associés
+    SELECT
+        AL.eor_or_surveyor,
+        AL.painting_cost,
+        AL.painting_materiels,
+        AL.sundries,
+        AL.num_of_repaire_days,
+        AL.discount_add_labour,
+        AL.vat,
+        AL.add_labour_total
+    FROM garage_db.additional_labour_details AL
+    WHERE AL.estimate_of_repairs_id IN (
+        SELECT id FROM garage_db.estimate_of_repair WHERE claim_number = p_claim_number
+    );
+
+     SELECT
+            totals.cost_part,
+            totals.discount_part,
+            totals.vat_part,
+            totals.part_total,
+            totals.cost_labour,
+            totals.discount_labour,
+            totals.vat_labour,
+            totals.labour_total,
+            totals.cost_total,
+            totals.discount_total,
+            totals.vat_total,
+            totals.total
+        FROM user_claim_db.claims CL
+        INNER JOIN user_claim_db.assignment SA ON CL.number = SA.claims_number
+        INNER JOIN user_claim_db.status ST ON SA.status_id = ST.id
+        INNER JOIN surveyor_db.survey S ON S.claim_number = CL.number
+        LEFT JOIN (
+            SELECT
+                EOR.verification_id,
+                ROUND(COALESCE(SUM(PD.cost_part), 0),2) AS cost_part,
+                ROUND(COALESCE(SUM(PD.discount_part),0),2) AS discount_part,
+                COALESCE(SUM(CAST(COALESCE(PD.vat_part,'0') AS DECIMAL)),0) AS vat_part,
+                ROUND(COALESCE(SUM((PD.cost_part-COALESCE(PD.discount_part,0))*(1+CAST(COALESCE(PD.vat_part,'0') AS DECIMAL)/100)),0),2) AS part_total,
+                ROUND(COALESCE(SUM(LD.number_of_hours*LD.hourly_const_labour),0),2) AS cost_labour,
+                ROUND(COALESCE(SUM(LD.discount_labour),0),2) AS discount_labour,
+                COALESCE(SUM(CAST(COALESCE(LD.vat_labour,'0') AS DECIMAL)),0) AS vat_labour,
+                ROUND(COALESCE(SUM((LD.number_of_hours*LD.hourly_const_labour-COALESCE(LD.discount_labour,0))*(1+CAST(COALESCE(LD.vat_labour,'0') AS DECIMAL)/100)),0),2) AS labour_total,
+                ROUND(COALESCE(SUM(PD.cost_part)+SUM(LD.number_of_hours*LD.hourly_const_labour),0),2) AS cost_total,
+                ROUND(COALESCE(SUM(PD.discount_part)+SUM(LD.discount_labour),0),2) AS discount_total,
+                ROUND(COALESCE(
+                    SUM((PD.cost_part-COALESCE(PD.discount_part,0))*(CAST(COALESCE(PD.vat_part,'0') AS DECIMAL)/100)) +
+                    SUM((LD.number_of_hours*LD.hourly_const_labour-COALESCE(LD.discount_labour,0))*(CAST(COALESCE(LD.vat_labour,'0') AS DECIMAL)/100)),0),2
+                ) AS vat_total,
+                ROUND(COALESCE(
+                    SUM((PD.cost_part-COALESCE(PD.discount_part,0))*(1+CAST(COALESCE(PD.vat_part,'0') AS DECIMAL)/100)) +
+                    SUM((LD.number_of_hours*LD.hourly_const_labour-COALESCE(LD.discount_labour,0))*(1+CAST(COALESCE(LD.vat_labour,'0') AS DECIMAL)/100)),0),2
+                ) AS total
+            FROM surveyor_db.estimate_of_repair EOR
+            LEFT JOIN surveyor_db.part_detail PD ON PD.estimate_of_repair_id = EOR.id
+            LEFT JOIN surveyor_db.labour_detail LD ON LD.part_detail_id = PD.id
+            GROUP BY EOR.verification_id
+        ) AS totals ON totals.verification_id = S.id
+        WHERE CL.number = p_claim_number;
 END$$
 
 DROP PROCEDURE IF EXISTS `GetListByUser`$$
@@ -569,14 +722,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `GetPaymentListByUser` (IN `p_email`
     EXECUTE stmt;
     DEALLOCATE PREPARE stmt;
 
-    -- Pagination
-    SELECT
-        v_total AS total_paiements,
-        CEIL(v_total / p_page_size) AS total_pages,
-        p_page AS current_page,
-        GREATEST(p_page - 1, 1) AS previous_page,
-        LEAST(p_page + 1, CEIL(v_total / p_page_size)) AS next_page,
-        p_page_size AS page_size;
 END$$
 
 DROP PROCEDURE IF EXISTS `GetUserByRole`$$
@@ -654,7 +799,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `GetUserClaimStats` (IN `p_email` VA
     INNER JOIN assignment A ON A.claims_number = CL.number
     INNER JOIN users U ON A.users_id = U.id
     INNER JOIN account_informations AI ON AI.users_id = U.id
-    WHERE AI.email_address = p_email AND CL.ageing >= 48;
+    INNER JOIN status ST ON ST.id = CL.status_id
+    WHERE AI.email_address = p_email AND CL.ageing >= 48 AND ST.status_name = 'new';
 
     -- Retourner les résultats sous forme d'une seule ligne
     SELECT
@@ -1099,6 +1245,11 @@ CREATE TABLE IF NOT EXISTS `account_informations` (
   `password` varchar(250) NOT NULL,
   `website` varchar(150) DEFAULT NULL,
   `backup_email` varchar(255) NOT NULL,
+  `date_of_birth` datetime NOT NULL,
+  `nic` varchar(50) NOT NULL,
+  `country_of_nationality` varchar(50) NOT NULL,
+  `home_number` varchar(50) NOT NULL,
+  `kyc` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email_address_UNIQUE` (`email_address`),
   UNIQUE KEY `users_id_UNIQUE` (`users_id`)
@@ -1108,16 +1259,16 @@ CREATE TABLE IF NOT EXISTS `account_informations` (
 -- Déchargement des données de la table `account_informations`
 --
 
-INSERT INTO `account_informations` (`id`, `users_id`, `business_name`, `business_registration_number`, `business_address`, `city`, `postal_code`, `phone_number`, `email_address`, `password`, `website`, `backup_email`) VALUES
-(1, 1, 'Brondon', '48 AG 23', 'Squard Orchard', 'Quatre Bornes', '7000', '56589857', 'tojo@gmail.com', '$2y$12$DQcPA1dClkAMmVYnjFesKedCBkiLuZj7mD0gqgzegunGQ5X9/Rw16', 'www.test8.com', ''),
-(2, 2, 'Christofer', '1 JN 24', 'La Louis', 'Quatre Bornes', '7120', '57896532', 'rene@gmail.com', '$2y$12$Wg3ISNFeWVw.yGV9u7EVtOpMCk7z64KZ9SpKZIgXaoeeuYZe8pbKC', 'www.rene.com', ''),
-(3, 3, 'Kierra', '94 NOV 06', 'Moka', 'Saint Pierre', '7520', '54789512', 'raharison@gmail.com', '$2y$12$nHmXmOQnSx4Nt0H7DX3Ye.OIa7BEjRz1Ez.gK3uxG8C1JwBBLmbCa', 'www.raharison.com', ''),
-(4, 4, 'Surveyor 2', 'Surveyor 2', 'addr Surveyor 2', 'Quatre bornes', '7200', '55678923', 'surveyor2@gmail.com', '$2y$12$nHmXmOQnSx4Nt0H7DX3Ye.OIa7BEjRz1Ez.gK3uxG8C1JwBBLmbCa', 'www.surveyor.com', ''),
-(5, 5, 'Surveyor 3', 'Surveyor 2', 'Addr Surveyor 2', 'Quatre Bornes', '7500', '55897899', 'santatra@gmail.com', '$2y$12$Wg3ISNFeWVw.yGV9u7EVtOpMCk7z64KZ9SpKZIgXaoeeuYZe8pbKC', 'www.surveyor3.com', ''),
-(6, 6, 'Garage 1', 'Garage 1', 'Addr Garage 1', 'Quatre bornes', '7200', '45677444', 'garage2@gmail.com', '$2y$12$nHmXmOQnSx4Nt0H7DX3Ye.OIa7BEjRz1Ez.gK3uxG8C1JwBBLmbCa', 'www.garage2.com', ''),
-(7, 7, 'Spare Part 2', 'Spare Part 2', 'Addr Spare Part 2', 'Quatre bornes', '7200', '34667777', 'sparepart@gmail.com', '$2y$12$nHmXmOQnSx4Nt0H7DX3Ye.OIa7BEjRz1Ez.gK3uxG8C1JwBBLmbCa', 'www.sparepart2.com', ''),
-(8, 10, 'Miha', '67236', 'Qutre bornes', 'Quatre borne', '101', '3U873839', 'miha@gmail.com', '123456', 'miha@website.com', 'mia@gmail.com'),
-(9, 11, 'Super admin', '123456789', '123 Rue Principale', 'Paris', '75001', '+33123456789', 'raharisontojo4@gmail.com', 'Tojo@1235', 'https://monentreprise.com', 'tt@gmail.com');
+INSERT INTO `account_informations` (`id`, `users_id`, `business_name`, `business_registration_number`, `business_address`, `city`, `postal_code`, `phone_number`, `email_address`, `password`, `website`, `backup_email`, `date_of_birth`, `nic`, `country_of_nationality`, `home_number`, `kyc`) VALUES
+(1, 1, 'Brondon', '48 AG 23', 'Squard Orchard', 'Quatre Bornes', '7000', '56589857', 'tojo@gmail.com', '$2y$12$DQcPA1dClkAMmVYnjFesKedCBkiLuZj7mD0gqgzegunGQ5X9/Rw16', 'www.test8.com', '', '0000-00-00 00:00:00', '', '', '', '0000-00-00 00:00:00'),
+(2, 2, 'Christofer', '1 JN 24', 'La Louis', 'Quatre Bornes', '7120', '57896532', 'rene@gmail.com', '$2y$12$Wg3ISNFeWVw.yGV9u7EVtOpMCk7z64KZ9SpKZIgXaoeeuYZe8pbKC', 'www.rene.com', '', '0000-00-00 00:00:00', '', '', '', '0000-00-00 00:00:00'),
+(3, 3, 'Kierra', '94 NOV 06', 'Moka', 'Saint Pierre', '7520', '54789512', 'raharison@gmail.com', '$2y$12$nHmXmOQnSx4Nt0H7DX3Ye.OIa7BEjRz1Ez.gK3uxG8C1JwBBLmbCa', 'www.raharison.com', '', '0000-00-00 00:00:00', '', '', '', '0000-00-00 00:00:00'),
+(4, 4, 'Surveyor 2', 'Surveyor 2', 'addr Surveyor 2', 'Quatre bornes', '7200', '55678923', 'surveyor2@gmail.com', '$2y$12$A9/pwjw/3xpJAn2ZKt3CSOCW89.DkGB1Ez.MxQZVptmtCMdTbPjce', 'www.surveyor.com', '', '0000-00-00 00:00:00', '', '', '', '0000-00-00 00:00:00'),
+(5, 5, 'Santatra Miharimbola', '1 JN 2025', 'Avenue victoria', 'Quatre Bornes', '7500', '55897899', 'santatra@gmail.com', '$2y$12$Wg3ISNFeWVw.yGV9u7EVtOpMCk7z64KZ9SpKZIgXaoeeuYZe8pbKC', 'www.santat1.com', 'santatra.r@gmail.com', '1995-09-06 00:00:00', 'W01728617827821', 'Mauritius', '628468273', '2026-09-01 00:00:00'),
+(6, 6, 'Garage 1', 'Garage 1', 'Addr Garage 1', 'Quatre bornes', '7200', '45677444', 'garage2@gmail.com', '$2y$12$nHmXmOQnSx4Nt0H7DX3Ye.OIa7BEjRz1Ez.gK3uxG8C1JwBBLmbCa', 'www.garage2.com', '', '0000-00-00 00:00:00', '', '', '', '0000-00-00 00:00:00'),
+(7, 7, 'Spare Part 2', 'Spare Part 2', 'Addr Spare Part 2', 'Quatre bornes', '7200', '34667777', 'sparepart@gmail.com', '$2y$12$nHmXmOQnSx4Nt0H7DX3Ye.OIa7BEjRz1Ez.gK3uxG8C1JwBBLmbCa', 'www.sparepart2.com', '', '0000-00-00 00:00:00', '', '', '', '0000-00-00 00:00:00'),
+(8, 10, 'Miha', '67236', 'Qutre bornes', 'Quatre borne', '101', '3U873839', 'miha@gmail.com', '123456', 'miha@website.com', 'mia@gmail.com', '0000-00-00 00:00:00', '', '', '', '0000-00-00 00:00:00'),
+(9, 11, 'Super admin', '123456789', '123 Rue Principale', 'Paris', '75001', '+33123456789', 'raharisontojo4@gmail.com', 'Tojo@1235', 'https://monentreprise.com', 'tt@gmail.com', '0000-00-00 00:00:00', '', '', '', '0000-00-00 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -1193,20 +1344,22 @@ INSERT INTO `assignment` (`claims_number`, `users_id`, `assignment_date`, `assig
 ('M0119923', 5, '2025-07-03 20:00:00', 'test', 4),
 ('M0119921', 6, '2025-07-03 20:00:00', 'Test affectation garage 1', 1),
 ('M0119925', 5, '2025-07-06 07:00:00', 'urgent', 3),
-('M0119926', 5, '2025-07-07 06:30:00', 'à vérifier', 1),
+('M0119926', 5, '2025-07-07 06:30:00', 'à vérifier', 2),
 ('M0119927', 5, '2025-07-08 08:15:00', 'dommages mineurs', 2),
 ('M0119928', 5, '2025-07-09 05:45:00', 'prioritaire', 1),
 ('M0119929', 5, '2025-07-10 11:00:00', 'réclamation en attente', 2),
-('M0119930', 5, '2025-07-11 10:30:00', 'à traiter rapidement', 1),
+('M0119930', 5, '2025-07-11 10:30:00', 'à traiter rapidement', 2),
 ('M0119931', 5, '2025-07-12 12:10:00', 'sinistre confirmé', 1),
 ('M0119932', 5, '2025-07-13 07:20:00', 'visite sur site prévue', 2),
 ('M0119933', 5, '2025-07-14 06:00:00', 'urgence faible', 1),
 ('M0119934', 5, '2025-07-15 13:45:00', 'pièces manquantes', 1),
-('M0119935', 5, '2025-07-16 11:14:57', 'test', 2),
+('M0119935', 5, '2025-08-26 19:42:22', NULL, 2),
 ('M0119936', 5, '2025-07-17 07:40:00', 'sinistre complet', 1),
-('M0119937', 5, '2025-08-07 09:43:08', 'note', 3),
-('M0119938', 5, '2025-08-07 09:43:29', 'note1', 4),
-('M0119939', 5, '2025-08-07 09:45:20', 'note2', 9);
+('M0119937', 5, '2025-08-07 09:43:08', 'note', 1),
+('M0119938', 5, '2025-08-07 09:43:29', 'note1', 2),
+('M0119939', 5, '2025-08-07 09:45:20', 'note2', 1),
+('M0119922', 5, '2025-08-25 21:00:00', '', 1),
+('M0119924', 6, '2025-08-25 21:00:00', '', 1);
 
 -- --------------------------------------------------------
 
@@ -1220,7 +1373,7 @@ CREATE TABLE IF NOT EXISTS `blacklisted_token` (
   `token` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   `expires_at` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Déchargement des données de la table `blacklisted_token`
@@ -1228,7 +1381,25 @@ CREATE TABLE IF NOT EXISTS `blacklisted_token` (
 
 INSERT INTO `blacklisted_token` (`id`, `token`, `expires_at`) VALUES
 (1, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTMyNTAwNjgsImV4cCI6MTc1MzI1NzI2OCwicm9sZXMiOlsiZ2FyYWdlIl0sInVzZXJuYW1lIjoicmVuZUBnbWFpbC5jb20ifQ.TtllsQbeQ4uM5cYIdoheYigVg9EZLjA4IBZ4wugl_wlmdq2G_4ZJ3xQvapFlfw70hVh3D1PNcgbGfSljjYh5mE3nfoBnPcF6qaz9Tj85LaRZTPAkbOXWLmeuJH6gzP1v-ouKEIeqOsNTqDliovVjrtArj2s7ZJSdAXhE4tHuZ0QXRFWVXEKCVcZ22609uzI1IBo1FGcsymik4rfLNstdFBpwR61V2mkWrBRpcafJyyXs0NrXPIlqFxU5IZJ8u88yG3vowhnEAVpjC3PM1rvR9X5Qd3AO8ymvzRWJ4To6RpGH2Ai3rNHuveiGC6t75DoH-7t5c7d-X5ItawJWpY1kbJNgNqZ32P-7YKViwFAoTUTbxi5ML0GCs-ym8VCghMBqxID91gtuYX6S9Dgmw3fbHHK2cZeUwaWJ17uNzu3qBWm0xBmksRgxwP8CEKIArw_JXL7GdQkLkqGOK0egRWXRbEmQkU8IcP1ZT0jqoVjEHvwKewU2GhVw_5UrOBe7QHAemFYzUYdurepzDXOSHAqZmBy_g18fueUe2w1OPpEImlhJQHso4iWpkMcZO-TzzRoS74BCQ_bqDhfxpkd8uLeTojad-hm70hpP5nMsgBxOfsdQOeimNeh5PI5Uo2EHHyPq32WiKEGXJjx_IA5UFvrp374KKjhA6Ipx7ca2rwJrnYY', '2025-07-23 07:54:28'),
-(2, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTM5NDUwMzQsImV4cCI6MTc1NDAzMTQzNCwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.O1D6iH0IneKhI5wzEcFSmEfMKDryJQxqh_IDtSJXzfMpOOhJM12ij39Tw1YenxN-sd2kt-FuBelu9HOJniTIKynzekn94GYjR9sWrVnlMMWnzdtpCybiUiaraJwZf-budZlm0cjgj_xJiaE5yrvAzyLrXYfcYljX1ITgzhR8mfpcA0dDsO6u8EtIaPNV55KRLrAsjwYGIxQUhh4da1sONyjTSG7MhM5mTK0BXiTsrWvaCdMBwyyYWvpMvV90htYo1RN8TAJwiwdWzbCgXH6DbuVmiO0Lb7e340tce3t-b286vC3bp9P4JHCWfMfBfP4p6rSOGeuMgyKsOG5bnnjeohzIi5dKc0fEXmdc-F4lEpr0XEgqvSEkFg8sNhQ33Pk7IUXhSuHF5JhROgIiPfEGFDfQcD1LmJfJFRw6WkW-ybsentaYRIbOdh1aSDxGwgrig6QwQmkoaHYOQ0NkutWsgjxLoHnrU1raXokGcltxhu2FaF0IrdkXffVJFo6BtlJfx31LTv2DrhDzijWBWx4klyjRMkgp7TAn305-RqhDpRMBFGqAN_q2sS2KnUeEm0ZawHxI3Fqe0adgjX30nAer6AW9-JosuyhO2oo2fUnwv4YVgH8AL4g-EDyLBmqsUiT3YlqIOWS9Z9v6Dd_m84UgozbIuiesjfDHJS7pVYT5JsY', '2025-08-01 06:57:14');
+(2, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTM5NDUwMzQsImV4cCI6MTc1NDAzMTQzNCwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.O1D6iH0IneKhI5wzEcFSmEfMKDryJQxqh_IDtSJXzfMpOOhJM12ij39Tw1YenxN-sd2kt-FuBelu9HOJniTIKynzekn94GYjR9sWrVnlMMWnzdtpCybiUiaraJwZf-budZlm0cjgj_xJiaE5yrvAzyLrXYfcYljX1ITgzhR8mfpcA0dDsO6u8EtIaPNV55KRLrAsjwYGIxQUhh4da1sONyjTSG7MhM5mTK0BXiTsrWvaCdMBwyyYWvpMvV90htYo1RN8TAJwiwdWzbCgXH6DbuVmiO0Lb7e340tce3t-b286vC3bp9P4JHCWfMfBfP4p6rSOGeuMgyKsOG5bnnjeohzIi5dKc0fEXmdc-F4lEpr0XEgqvSEkFg8sNhQ33Pk7IUXhSuHF5JhROgIiPfEGFDfQcD1LmJfJFRw6WkW-ybsentaYRIbOdh1aSDxGwgrig6QwQmkoaHYOQ0NkutWsgjxLoHnrU1raXokGcltxhu2FaF0IrdkXffVJFo6BtlJfx31LTv2DrhDzijWBWx4klyjRMkgp7TAn305-RqhDpRMBFGqAN_q2sS2KnUeEm0ZawHxI3Fqe0adgjX30nAer6AW9-JosuyhO2oo2fUnwv4YVgH8AL4g-EDyLBmqsUiT3YlqIOWS9Z9v6Dd_m84UgozbIuiesjfDHJS7pVYT5JsY', '2025-08-01 06:57:14'),
+(3, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYxOTQ4NzgsImV4cCI6MTc1NjI4MTI3OCwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.4SvywcFd4Zq-cG-uvpKGkFMhbGN96P7nO3E4bTa4Vqs_JSVXB4mm-ZRFM0sDbXUlAdpp6Fpd_RVpF4Kb8uEbr00UORvdHoP65LxZo3cVBdQWFk9UiP6ySRwvOtz58d-toURFe2IodZaZbUo4192Sh5QSMTdBkzM0xnIvuIOO_7rscfYcczcqVvapGa36zyec0mWRHNOGDu9iqSB2ybQBJyG-Wma4muRvoJQW16lfENXLsjD4xPos3qjdPix4OqQ3XqBLXKFp3m_l_JDL29-JupHHjhzmMQCG78A1Os9zGWYphvrDWHordcJKLk2-QK67sHGJxq4LGYXFgt3YXg_ZxyG00TUQGeSr8OmhMMVOC6JDvKnfiEmYZOnThhu6gNUZ5EYvAvzjRbr3Ka2J_fGp9tMlbkCmjBdKSomoygI1858YBmq9z-qALqAOhKaMmMFxm6r4twBjYj6UDZczsZqKhRTr_zSUkDHfUAgJCa2kjKOHTos3hvzJ3E1_btNPobV19JY61emUWSjjlERn-59oXVKy9-2bGEfFJj1Q9vhIKb_RGjWeSIh6vKHKkFR-ff5ZvsJaqkH9IrjfP9TP-qecmXiPt0Ly0W2-1TaPe8hTLrov6Agw8ecAbSrnWTJuJIClJWXGEustC7ZjINKdtTK251J93L1ygv36KTn_wW3o75c', '2025-08-27 07:54:38'),
+(4, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyMDk1OTIsImV4cCI6MTc1NjI5NTk5Miwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.tqWqo7PJKfEEAfHOzPiSoIC4Z4BtkgayyCoKemIC98TT6HMN61WX2-HEkDEh_UWX92dieQn6GaLNACWU3EzGEYuI3JSGeU1cgii6Dmki9HTbmGiCpVR5qep_uOJfbv4SxPMDr0kmFcCdq6CAoGGHH04vIWNTaWJRsUO3MEHgXJ1vrdYvQ-a3Ok1xjmxTwQAwfGmk5_a9p8M3SiI_No9MfhmhgrZ4hPvolpvyG5orqxS-MygYIHUOpbIx05mpRf76JOy8xtJvwBf_cxJl8XL2WY4w1ZE3xhx2X2FAMzXc7Z8f5Xve5W10iFVz6DHv2ojWaf6H3poDTqi0iBjf4WveYZloTrhnRa2vIOuW73zafnmJkHDhEzqFsp_nvAheTpY8zl_Wg69KuSqp5oSiWXQe3WsMMuqm33ZQz_fjQrmkd4CxcqMTywlsMd_LclfOrQy6d_0CdtPD4naPCaa-OgZgRgCEONY5gJAc9h1c_GyFjAH-75udq4JGxHhubH0DB7oyCNijd9K5IyuStrX52sFri060G2dENyivx9sHvzsZm_mvNMfnDkwgHfU5F7_yEX8H-vlsuAd7Y1oMKztGrs4jDmoI_TU4mlJebPenQMwfLzB48HL7tPEZ5-moLLOJROpE3a_eU5uxcScYGr8szTSzccz45kuKRA9JMsTEGkmAgGI', '2025-08-27 11:59:52'),
+(5, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyMzM2ODcsImV4cCI6MTc1NjMyMDA4Nywicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.fLitjbN3pTNfdcUsL2-bE5xiUedm9qLQa6I8Fw6X4Mh5tsJaW5NERwsZflZhR4eDe9tJqIbX3gqYWNx8wb9h1aetlzMGzNzARnWBDGoLE7UfnkXV_mcQr1BTYCZ2U_IUwcUZFrR1v1Krvb5IYnIczhe_5bqsIJpzI2PRuDar8eBzkIf1DwahB5bRIekb_XJFzKUVXJK_KMCH5s5SiguaBYAJiAcdTOqMbbhjywVXA_6YbD88Cvy_medEWnPUDfazMIJnVvOG_BdBRBlix9_7cU3H6PydUr6kRQMT8LfqQrZoHAhTwJzm15YysxYAQmWkRfdM7_th2CeYQ5zApaHv4Zl1uOT5FApaz4DKSAbhzjB06pFJaeGPrN9zmtMWEGdCEle81NBSqQE1spiCfoFqiM2Vmqw_4pX63PooH55yUsdw5EZ-mZ97slGDwsjZns0VTblkRrUoS6asWLJqykJe-t1TgbM6VJbnEEMu5dk4m0Dg249d-0uDVhAkkSp2jNzAFc0GgoikvOfz0Wjd4CZCw_EW0G-bH-37OLwQpUkUOxEUeYbORykJrnxvy-MRL56TmFm6CSKK3AhNEThCoPBOmJebKxG5OuQtJ3KIyUd-y6ygNiQmKraqHur8Twl_64eO5HIjq6CSfxhK6m_FJI_PVv-N4SC7jZHLxcQao_x29DM', '2025-08-27 18:41:27'),
+(6, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyNDM2MjQsImV4cCI6MTc1NjMzMDAyNCwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzdXJ2ZXlvcjJAZ21haWwuY29tIiwiaWQiOjQsImJ1c2luZXNzX25hbWUiOiJTdXJ2ZXlvciAyIn0.yyNCrvmXkDNwvAyqcy3jxSBGcVkukpqGPg2tb0n9BKdeTEoIrvztrfl3UC9j7anQn-g4-QKQ973DIMXxKwZ1klrdv5uWtKtEHenp7Puzgq3JTAIbTL4TvkSeU6jOXMo1D3123hWPsfWUoLCWHAWERv1PJjyp4mlGub211YEyBm9QuzMBV-hY4HedOJMxorBk1MZYZooW1xuWrdvns4agdjI3UucaF29gaRV71V8MFpa5zQKxpwnCyC7QG5Nn8nYnlr-LRyDHUooNT9hpU-aARQQftb_Pb77LKLQGScQkaPfp0BELUmYRuGknwin7X9NWVr8H66RSmWMnzdEFhgFrjpe4v5TL2lu7qp9oEf8V-mninhE9TTS09G4g31dgDTYHuTlhPldWp6IwcMq85qdDaKXqFh8FFEc7oOKTzVF3XT7iDNo9WZP9affWf9P3qolF_k8zvbPt77OVFTDenLNbMOnSA6NwvVIHYWCxPrW1ipWt-Vpm8uBhKbSvSragocobfnPwu0yCI_tSRocoFha3evXI26hGER36xmfbTSiED-doDaVEXWjn-fBJciFC4nAWtYt_-AnFWZE-MA_Z5kvYDcqSUaJBRZNptxxu86VXxYdTqFsyKz2rDlI4NKi8T2-c_xFtS9WuKPQ2Yvf1r5dgmBY4vgQk-g7IArjuK0tXIBo', '2025-08-27 21:27:04'),
+(7, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyNDM3MDcsImV4cCI6MTc1NjMzMDEwNywicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzdXJ2ZXlvcjJAZ21haWwuY29tIiwiaWQiOjQsImJ1c2luZXNzX25hbWUiOiJTdXJ2ZXlvciAyIn0.aVPMZXvA-h_0d_5ev7ZHzk0AlN4jCbvTNeKOxWcHvevhPZ6tH07-CB2SukynWoOl8Gz2M5zOtqsllORZbOSb1WVW_V692tKy5WIRIk0P_jLJNhkqJm3iIa2vZa4Gs0oIYa__yIQgWqVLV_m-1nfBSn3fE3n2vaqA6KTaRXs5vlvp0XzOJlACfsp5cg_YDWxIoWMpBHkR1vFYy94RhVgbGVawZFBysmpmjjDWlLXNhOs8Hjn5xBVSIzfBq0zAjLCBef6GOHGyA3-jScXXuCDTgbzexZoffDO_vaD91QksJQMphS32UYsY73KUBhDNaAqTA4tRiUV2anlhFs_nit3dxeeX9sM3OXqKAQKDiCpaSeL05W4rL9LYoJSZle3vS4D2INiHJz4MlTeE11fiy1Y_W3LCTYQbYvQcGuEfp8BSBD3j55_-wXRTYHqTzupsygCop6uMQXC3ijp6m68wBDA305TQHD_cbAsMXP17hTvcLLKZpOLkSRwii4IvV0qOB8G6p3w8WU_cQmjjUI1vVA2uGQNj-TmktIfM3KTvJZXEhQW45s5G7hLVVkF4TyB81Ya5hGXd1auL6VzZFo_G2P4YVcnZsmOGU_vn6Qyx_GZEEva0EfuwupL5CccrTLaniZfw1Nuu3bIiiNJCO_Fc4qs0NEJYJF4-vTljqOf1kXHZSbw', '2025-08-27 21:28:27'),
+(8, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyNDM3MjIsImV4cCI6MTc1NjMzMDEyMiwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.fhmqFe0Fu7qgotL6zTK_Izi3Tn_hwqaFWym_F7PHbkAT3dsNq7MmDo03c71ZvxKZIagwm2_7RKME5SfBKiZKNTfHWCVSDkSKT1bgtPtmLi8GvTOE2cbKqlhc-HGvDEgvYRrtS2eUI-k72vefY3iwk1oF6vJWwsLaPHBO8Cpo3ZHH223sAPFkEIcqoXe3HUgMB58-FhwfVl04Zc3femOgTQVLIoBiuM8Ykp4aDxHxADNYr0_I9ZUfAjjIcVOrmuP83vOg3OC_OjMwUI3DFprRUZvETOqynMhOmF04anDoNJfXjaiLfIP5xlW20gZ8y4KPuUogXtYtNqxZHPPMWC3bwrVnQX5DfVKh3J8WuDGBNyj2aw26L7eSvHhjfSF9J2bpHAe9TBUi0LEvauilfzHfBxu5dPDNhV_H146pGtnPJXvnn93FPo7I1sEm-rZGgjtVv9bpdhn0H5S4lSvSSnTsGqdfQPOnWd5M39P2bES0k-iZ1WbZWacPk5gtV3SCehh8udLbdKX6QD2QSWfytQVcGM13rdg4fEXGPsSdx5vmSxeki4AlWdWdc-wGtiXFnBjXnKqZQxKNASJb0in8j7jp6CnBvAybpSyv-vjeBodE_5oIMIMsiV8S0ScqA0TtuQTamVvBWpeEFkhlGZedlbbsch3tPTGjI8jCW9CZEESRPw4', '2025-08-27 21:28:42'),
+(9, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyNDQwOTgsImV4cCI6MTc1NjMzMDQ5OCwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.FFVr1NT4XzJzomJRxQZB_Q2nbN88DDEowk1MdltA2OGNciu0BeodYOTmzUqrSwB_s0lJz-3ESc4xw77FrXOOmsDfDqbGB0Cy_KVxaUIG8rYWncIjQ8yvj0pLJhY3aAxd6ajCM54DxdN6xSt4Zwbzdd4pLBj1pMTks9d_3uCXCxxmrwHhIBdN1t2e4ulWU6sMULw6VuF5QQnP9Egugf2JgEb0JEGNIxJ65bcQdMzBuJmJBVDeGeoCK_VdCUCA6o7rkLWZ-BR2uN0zJyHAUuhP9V5xRuzXynQnE4drYl8vFlK2NFZDQvWPk5Q_f_WGhQYrRU2bT1plqenMwFxRlVlLDMa-0ORKAIaQ2aN4nv7dxanlkZY2xZLqo89oPniy5QtUf27VbvLcxB361oD8PLMlRGrARgu3tdjcov2OAUH5axEyI9jQpxTp3OD3XKYN3vzu-rj2vXE4BUaz5rZkqXdfliJd6AQsDXT2LDgCv6iAhROAnUZxkQ8_q7e3CB1nfIWm8gJVzQUK8klSC1zu0pNAQM5OuElGuDdVbgYN8FQJVQff4JWzYKqq5qNJdGNbSK7yRk_-Wfu5MjSFr90gyOTUMPJvTstH6ZwO5W3GREkAQpCwtHBouxGz0LOyZGxjyTTPlYfNTQ8scoNUyC6MBEg-DdnJA9qRLeNqu3v4oAdcshY', '2025-08-27 21:34:58'),
+(10, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyNDQ4MzksImV4cCI6MTc1NjMzMTIzOSwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.PlQJY7Y3QdEygziisjwLwOwY6P1oh0yL5MCD6skeK7gj-OajWD60m2b6Z_m8ydmLncRS6_tar5M2g9pH1KpaDvG1s_1Cr0UladxzdlADbU6iX1fj3EaRIQQgNr9Eqw4o8aQEgRUlUs58lMgfUpIw0YwAVI7pBCGNSQuqfdJz4Bqw30k0lLsEx05lYzN_835FdXb0CaXljYLCMP3cSiLS45Qyy3haaNnpYSG8BropHCQrFolDPqmYvua_W05o1YSTVTKC3Lsl6ozqp3GLnV087KalCvGIoVTNTw9Lv7UD08DpAKkE3PX3vKTfERQPhSjsTEggkLMP91hNd5Ec-OWEKPBie2ypnfjFoM5dPHE9ICmFNMqT0uPIJGO3SadqD3wya_XpTs14Mka8wfCCbzDqB_6unUx65WyjkjQWSmdpG7UMQbhoE3PAU53122DsVB-JMO9wd1n3tLhwwk1LGesoSvcfrxWHeLcmE-6VN4ot70VczDwz-bPkZHo2KI1OYV7GX_lG4zlIuG3jRMwiVTPlwXeRSilRoK6S-wzfd4Cj9BZI4i3eydgnWs2S2VfB_TApvNk8klbQf5H-qXr18mtxpsLbmgtArZ6IKVsBEBn1xOLU02Tu7luAytbD3ABmtiX4nwytJD2Bpsd_Lt76Hr4USY6KvQ9qkVBynKUVc790TtQ', '2025-08-27 21:47:19'),
+(11, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyNDUxMTQsImV4cCI6MTc1NjMzMTUxNCwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.yBu5L2lnp86ElzXInLnKg0i5flyf71FQ71VLccpVRm_9FUBxzq4A6i2hYFqEA7gOD4C1ybDIJWmTiomIri60lyxFJJmodw1nQwMYo2nuf_2PUw9vxBS7P-hRAE4tXyQDfqS4Ufqw6fPJbFPmyDDGyecbsJAd4_4Khq5hrpJhMi2AgY9oXL6LmvrlVW2XmFTrS6zfMmjU3j2aZDeuIerkddh8PwNt102fH8rOqfANSuSQ7PsL7iyrsZsPr4W7cCRSFuIaJw3v20rnnOvkcTD9hHU2HlfxX7NDjBShJDFcJjcvrrhaizLD5VZfeuY9YYcmjNzbFrp8wFWPhDoT8SILw_85r0VWG9dufxhVKLhs_EQZeabJ5Kyb2oPge_SWhPfeCZebwlna09azg9tfBNJcquuaQKk7s-xwBq4yTMbZBlTX5qtkDwM0PueodSzm0qZUyeXyoS0fY5JJqvf4Xwyeop4tGDGnxR6zAHkU6dDmAt9ztPejbv7P64oyJOG-IX2PCyTj3BzRX9CbpRZs7J5-Nl39x-eeRL4tiu5CKZ0xz_zWFxPjdm4Qwzvz2pYitVhL2IBM_cWJnFBx79AtJG-7QTpE4vvs6TIJWiMPK0ZO7NNYFL76Dbz_O2lKQLlKUtZwh58J4oK4JJYrlZrafYhL4n3pDkT6J-xWnzXj6rZMkKo', '2025-08-27 21:51:54'),
+(12, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTYyNzg4ODgsImV4cCI6MTc1NjM2NTI4OCwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.vWVRJ9T--vAGyNqyoCGz6SwYKhceXx9GL7zJwhxMzgZrLbriuB0-zI_fQTzGteV42YxZII-dRXdWOW8QIZ-R8a8aZcKJZMuGjp-v3LhN4uphZwgUbTkGf3aQNPYQKUnMOO7go1Is9ixIr4MRkEl8igBEoQcAExkCmrP1NaJfFTOscQbDqws59GtbNmezr3L0qkze7-LMcnffhacTwZZ1c2xSMwGuon0t05F8ha7WuSHgPwFisZ6_csqi0TpiERPAH9a2dT1SZKi47c0fAADakxkYIv2h8j29UPKAKjLWyQo_BHBKM6ERpA8Al7E9McKFMtvT_mmZ_reaHMdSU7d50LaGnfiITKsXvu0Setj3M3xlud2UYyCuVEe2va0LPl1K0HagsAs4R3BeRig58NnsLxBqc90I_mbVOY9MvVscXHlrTcTyTT69GIJSXX3RfjEbizG_cNiMSv6JryNbQNJqnoXdgBNbUsaD2pzw2um9quNr4pIt9HTLKOcywQh4a7guPDV4bl0nMM_sUVm04hJwU7yh4J9zVj5mpr4r4WsA2eWAXLxFmYlJyPwZqJSyI4sU3A55f5FrZSpJhoXF9OSdDwaKzv0r8rMsi9lrX-A37C4fkY2Zi3o8mUEYfxBJmEBVsNE-7Cg2VOAvJBYLtBsDSnlYik_Phrc5DvkLrKmP9TI', '2025-08-28 07:14:48'),
+(13, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNDYsImV4cCI6MTc1Njg4MjU0Niwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.Ij1YL3a16SGMmdWkWpTYPBAc32SuBZ80TeOf2qaFvQYprOOyprP7e7KzsPdkC_CE7n8fIrlQaS-6lt2mN8xKA6e9LScnL3afLEtKx0bkquNKow7uEQCkiqev4TeRy3_RLNAqOEhCzxcNF1PNQaTw0gVyhjtWICSr4Dk-GSVZwIrrZYIhvNyi2o5s6Vdo8RBUTpJ7YWmCF_VfQ4YvolQNNWiVAA9YFe6K_nuqYHu-z6ThGwUXwU7KVuI64e72fvE2HgXs3JHOCsEgzeFIQXRzXdKZZxYhXRybVHlckTng8HI82zRCaR9gsGp98WFUNEJTIzst8O2DILOiPeAdiLjOcip3CerewfRmjUQa9FZxwcLWeOE9GkSLDFh78xYjv8R9iBaxER0XP8Frrr94l_Jw0WKVEUGCTommap3IF_XkmH1a3rEwyG-WaZcINjRaT_IdQ2n6UuO84bje-NnQ_ush8LQb50D6VbqqxWgRCUk8T84rQXObJB3O3f06QGg5bnIQCKVQqjykM_pqXTiPlfMejBp7i5Cq3pRq12-LOxV0zNtaSKpdLQQ1II_zK9YbeLBXM8qKlvR9vp0fqeSPsFNTImq-Wf0r-DjfsqZKNs08HVkEli0d3M1OGRCLAGsZ59Tv39jMwlyaAeQmyXwX_4TdRBxw6520IdU1S96ZMLfUnMo', '2025-09-03 06:55:46'),
+(14, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTc2NTkyNzIsImV4cCI6MTc1NzY3MzY3Miwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.yi2OlsLzb_XbB-PRXBlSQJAHqNJP7x1gtXMFSXOIbJiTnYFygUrkO2t8KLTjQy4-4WgkGiXNxeuVYCqbQ1nIh9Hsw_04HunZHqn1HCjX9l6BarK5Mq4E8EEgFrLGb0nepeeTcl7InDBTjVfAH9t6GVcJSVkqu8gkh8xfCQWKFQMNyrNj7xp4Wvo8wB-TNPgHOwfa2afXqH-wEkaZRCRICugFghHz5h2hIif6OoMYenzI99GAh4yjxI4oIihSO9AaBh90gRDlb675gDNNZN6_odcRU_b-Q1Fd7isyw8_v_g1C0Hr2BAMjt5a6DBWrShh4JJM6AJTBPRVAZcJExmG4CCt6XHEf-JuURtLKTCaFj_Ie11WmIRy8x2YRoSqBP7G8zhO0ySC40W7PpbcQr-s5OalUDgsSJUfXbYWNXjS8R7FM1L1GX3qhjOCnXKXx0uFeuOiKmQWMzSywswDnhol-Ark9MVXMYczDN-_iVVgSgjgEsvsniLP7wgjQV76XqpdlFu-iM3wgO7NMklQ4j5jxOHQQmw475Eioq-6y_kozXpproEBDQoQmwtN2oh7g34tgVe-DbPYM_iCfbhi69TqCH4JU61jjWi3qb0pYX6dNj7oOPGQH0TS64260K60sE5Fa3-tLbPFP486zg4bS3-65tIqhY9VEGMwrszmNMaXgDPQ', '2025-09-12 10:41:12'),
+(15, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTc2NTkyODAsImV4cCI6MTc1NzY3MzY4MCwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.dkoz4UyHauxe4h1rZcNQxK7jnsf4UuKb6WQvh6Ljo9TuAQwqHqcbPkz529RDI19sj-pMfqRWqwOx5Ec_dNIw37W_55wnewaBXYXn14LReSsGYm_bGOcMRePwr7KkOpKwa7szMSNdL6fi2SkLkE-z2dmPA9G2Uy0YLIghi1M02iGJyOkjVsPE8pXVCzdgiWKwOi5IVN6iP_r1N0cs2T9Gt3nMe6vMANQkGumKPMApx86BX5S6IuUd-naTdiWk3Xknjty0SUr7dz2iB9Y77cThUVfJvTfVzjDtQ0jD1svD6oiDjeRRS6TOQ9gLUyC5MpGupDxglUHwKsw07wqnJjitG8VdAO_tJZkKsi0RPOeW4cqzkYGAO5ryjNZ2MoP-0qqk97rdBF9GlRGaJCe7CMdkqDDmBeH7QRwHUTpPcFMpqa99IPMst9iy1WMdknjCjJZWfT6UviBtDBBAG2v1S9n_cmERbhwBx6OGjtlgwyg1NNH7jrGdSixmCNiwBBHdBciHX1AfbD_Aphvq_dyyYG7EIzNApHwtVgAGU-UPaHt8IY7k4miZrgaWFVj5dWRugwn_2Syo1FfmcbiSb8kArrdysUpUV67UV7bXhc5lMm8R-ln8e-rdx4RMH8A1SaeHXNZPxm9fPxUiJa-jQhhr2Ouw7HZASuvoZCaphrkqmMc2qJ0', '2025-09-12 10:41:20'),
+(16, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTc2NjMwNDcsImV4cCI6MTc1NzY3NzQ0Nywicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.g8IH_i9h_pKjmKGNEFBF06rzOnMXWMT4JgoZvz3gp46MJz9rnGfYhgc5VObIdGgG8W-KffWobBDu4e1lsYJYqqbTwNZZbkGZ0Mt3v84vRkBGnJbE30lqZp1whsCpHprVNMIAwy2PL5g4xmgnxMGHFm6EpDcMNmxMjzPBD2WHpBeEXXYbh3MWdYjjpNSdB_YhZEmhCJD0p5vuvZMF4lhQzVnHF2TnKuUt3mV2maNjdU9RAsYrJdQ2T2-cRM2sy7BekWpjNXCPfdanB5T3qG-HqytoUPTjiQv_Tt275scmLAICBRzYf6uEwT9HDNIMYJEfAfAbOMz1GnNOGALyJAySp8c0p9kd2J-xXLoplhpofjwNE0gOBqYPhl8zLWkPxr1sT6N---R1O1ZSb_nsE1scWjKdAmnJ1zu9IWW6I65dFYqtSbZOr7WY61THne6-blQ006zlHlLRUWTgF_Q4DKo93mpFed8bo88s7onmkzhdqOL5HJDQT7tsCnf3WY2z3l3_-nycDg-H7KWSt1lrPV0MzyIL7PoDq-1_L5cORov7KXpP8GcBxYlqXKFPGcNgnQm7GfF0y3ptTKkkon6l8H8G7O1TVBmWuvlgqdDPAPuNhgfmA53D5Bs6aCizlVX8qMxxJ4nrasRwtbk0Njkh7cH1sQA1wPlJFyv9y68Z2j0bagU', '2025-09-12 11:44:07'),
+(17, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTc2NzQ3MzUsImV4cCI6MTc1NzY4OTEzNSwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.XC_cUbQv0nAisdYTe8FZWjM1SIzdUxSFYx3HV6Zgss8mT6vuCPf9R9395pd-i8A3U2u6HJwTQpembbo1lpbLxt6oicY4Cv4XWc0V4lXsEjZlOiTtwJ3Ml-W6d2fq_EQLy9g7ybmSEooFEF9vbnHf0Mc8vv7O-dFyPPA2ynGQKLGKp0JnT9IryA5nSVmMX1C8Bl4a2BAcCA2nCyghbvVBQ_1Nh3OcnzUPU06K0PTzxfXt0EpTGiPb7q4uacOcGM7jE8kEqlCSR9HiHmk-0PpVVsOGfXCPQpSRX4BqCcrOnPVTUegqnFrp8jqbE_TFvuYIhE6m47UCQb3-Grz-p04tbmUMPBknxM40A0uub34jvhs_gGhhfn6t73YBRhZLgSJg6mEEuLJUJjpa6Kp9SQKPvFL65OB1_wXSzh_mO3b7UieLQvqXrkmA7-xEFONLmY6eXBKcSV5oX30awb0PdL30kUzcXi6rBD5EC9vS2mYhRvzs-YZbTxY8tQEIsSQW50zNSD6jyRSZKsqSroI7vyHWctJE32ngC6q6BEFvZmbobB5mjsVVYM9LyAkdn30HbIV88XbDbSirxg9GFbe7hQImXLODcHueu4d2pqJ5JiGkkWPZwmSGFbtHe-lfKDICU9207XK0tEWHirsGBpmcIBSv5hX6-D35iTT-m9ir4A9ZAMM', '2025-09-12 14:58:55'),
+(18, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTc2NzUxMzYsImV4cCI6MTc1NzY4OTUzNiwicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.f2pCgE4v8qUdC9ZfAVj1fTfRPPMkFLJO-KTFwt17bghOodoSUppLaL00bUCD8dE-2Y87rxBWU0sU7YHNOG5D1MewQ_4QNjUARSibba2Y6-hrz104P4JFVIBUPZWHEzi3VtZDllhBbDRFwSXSk6xURZCmy77YjtPNYmgcG0FBvgWksEHvuPRMiaYiuFIRwXg9ICvc4XDqjBH4Yz-gxgmworPWPIMaHHfuXe2EatmyRs-ymLsnK8azdjpPEmGZ9E9mY6P-RRhrA_bW_dd7BXff4JtXDuJf1fw1xMkSL4VRtyIjwiaCLl_mp_Rj1KviXP2lMAgH99b-JDpUMWqPD0zjAqbwXPEA0bdaCd39X3wgR68zjv3UQrrACin4Bj46E_MKEWVLEiDr8J3EbEhEaD3eqgfZxtneUDGwUfYMm0i_UZb74P8Mf-gzDQLLuBgBgpQ-27EhNUjUMLPqZQMyyJCWg4h90FBCkQKqu2RiqH-QB7mIpCVyy-uvg87tfNO1dWdyjgl3iLefxGRAsTHGC3R4fjrNtOl6xpZK7gKoLX1MHMERMuGM6icownXBtFvL_OD8u4EppdepRGInJ1M1Fyxb9bNuyLTWZf8DPbHuE739PHYRlqLmEu9oIcqct0rBrGkg5-CQ9jLDVTYOFtOMF1kmq1vcCrIfqW4lKuXuTljgYfE', '2025-09-12 15:05:36'),
+(19, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTc2NzUyMjcsImV4cCI6MTc1NzY4OTYyNywicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.Ja63pswtpQZUoCHubomXjIgVi-m2ob3gpkzUEbfT7TFuS80wciEBahy-hTedJYd77VRbAOP4TQQsFvnCVsRAI7xkV6Rkaa6ElfGVwjQoSK-Owb5aas7Qlpyd72TUoYovBYjoWA3-1iHRaMTrjR1HWX6_cfMBSgISDGe6cRHdZ9Bsdsgw5kz8LvNoAaoyXvDlfD45NQ5QpEU5T_j4-d2JpK2AallSGs4bNC6nZtWb63-_WmRTQq03l3TaRVXfdt-AD8zjCBLVk-1VzuAi331h28wTJBy1Pv9eN4Gut9N0l7wZX_bTh6bRXUiIdhHE3KV58YjQ-5Fw0EksfP10nNa3Rh0s-WZ0zFKWVC0M01Z6qP2DZK9ikpxA7BSHA8jGMvEKNfhHaup4WGCeKxgoyW37badDKpkZgucnmItjYjcvpKyL-VLh0P-ekZ1fTqMou5GI1iXkHuCInm_rGfRRksp35UXlQ8xvgyYgyACHOJ0MamU00SMyqQDWdwHzq65thdppQD5PFuzxRsi81fiazM8J4MNHMDP1N6lqCCYdaNhZWEgoZ_jtsNPYz1CjGfr6FtLj574QqgooA8VtctyzK-FvGCIPmFzyrurK8uTFQP1cB7VxsrhRl7o-wkPZecgQx-iSiPiuPIybTO23T-fmVSpGzyl7edbMrai5GqJgwyePEL8', '2025-09-12 15:07:07'),
+(20, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NTc2NzUzODcsImV4cCI6MTc1NzY4OTc4Nywicm9sZXMiOlsic3VydmV5b3IiXSwidXNlcm5hbWUiOiJzYW50YXRyYUBnbWFpbC5jb20iLCJpZCI6NSwiYnVzaW5lc3NfbmFtZSI6IlN1cnZleW9yIDMifQ.ZnLNR_lWYwnMEiWHxK47XwzQA8xWg7BJ72Adj1XuQ4us6PwYYQRi6CBpW7ia9b_9AyLHiBkJNhrLG91_7Qe-mwVvDOS5dx_6zOBN8XIOGCqEeuaTGgZFiW9S2cr72OJKcCdZtJHtGrCM79PvjbedU4SSZncZx4QOF9NyCkXL7beriCItQxWO2tHhIweHx90LH60ffO1RZZ8pL-ukCFowrKcEh6g8MHagQZwI6IB_AIguYfQKWBmRbvab7ePq23dYVw8bcIBX1Kb0LWh6zWirWlMACqrrwvZt8WJ9eAEhbE1vwp9AJeUFY5Ny6REhqgBXHvJD1HHqamvgwEDYiW6v7BE794TfNTGiX8BVand7SAVj1kCza9itWMaX_jmobSw0WupulGHvPsK14JguMTEynYdz-B6bbGsBgyBpZQiOaXxZFMVipuhmc-YhcHnqkFOtrQGJNBeLZpu9RWZYlKU9L94kScAftn87irUzKHT0-ptnCY0dUoqeVRVHDcHegwgJMZRt5i8fCHNhCCg8TutvzGYed8WOdFPmMlr0OWET85mShq9AxMnLCsnLn2rEi7w2ua0FNsokbFNJ7uM1jrXQHc5aQhvaDL-qMtuBfIuGv-C3tpGFq_GgcHkSMVN_bPc48P3Paan4vmCp7humlg8A5MQwCXXkRESM1Dv5kJh3BBA', '2025-09-12 15:09:47');
 
 -- --------------------------------------------------------
 
@@ -1258,9 +1429,9 @@ CREATE TABLE IF NOT EXISTS `claims` (
 
 INSERT INTO `claims` (`id`, `received_date`, `number`, `name`, `registration_number`, `ageing`, `phone`, `affected`, `status_id`) VALUES
 (1, '2025-06-29', 'M0119921', 'Brandon Philipps', '9559 AG 23', 120, '55487956', 1, 1),
-(2, '2025-06-30', 'M0119922', 'Christofer Curtis', '1 JN 24', 96, '54789632', 0, 1),
+(2, '2025-06-30', 'M0119922', 'Christofer Curtis', '1 JN 24', 96, '54789632', 1, 1),
 (3, '2025-06-01', 'M0119923', 'Kierra', '95 ZN 15', 72, '58796301', 1, 4),
-(4, '2025-07-02', 'M0119924', 'Test dev 1', '1525 ZN 45', 48, '48503895', 0, 1),
+(4, '2025-07-02', 'M0119924', 'Test dev 1', '1525 ZN 45', 48, '48503895', 1, 1),
 (6, '2025-07-05', 'M0119925', 'Amanda Vickers', '8596 XD 44', 60, '59203456', 1, 1),
 (7, '2025-07-06', 'M0119926', 'Daniel Moore', '4412 BG 12', 36, '59216789', 0, 1),
 (8, '2025-07-07', 'M0119927', 'Lucinda Evans', '7925 ZA 09', 15, '59984512', 1, 2),
@@ -1276,6 +1447,53 @@ INSERT INTO `claims` (`id`, `received_date`, `number`, `name`, `registration_num
 (18, '2025-08-07', 'M0119937', 'Jean', '7387283 AN 52', 13, '3263723829', 1, 3),
 (19, '2025-08-07', 'M0119938', 'Marie', '28938 IT 08', 11, '827323739', 1, 4),
 (20, '2025-08-07', 'M0119939', 'Lulu', '893892 TF 03', 10, '8297379230', 1, 9);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `claim_partial_info`
+--
+
+DROP TABLE IF EXISTS `claim_partial_info`;
+CREATE TABLE IF NOT EXISTS `claim_partial_info` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `claim_number` varchar(250) COLLATE utf8mb4_general_ci NOT NULL,
+  `make` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `model` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `cc` int DEFAULT NULL,
+  `fuel_type` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `transmission` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `engine_no` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `chasis_no` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `vehicle_no` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `garage` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `garage_address` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `garage_contact_no` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `eor_value` decimal(15,2) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_claim` (`claim_number`)
+) ENGINE=MyISAM AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `claim_partial_info`
+--
+
+INSERT INTO `claim_partial_info` (`id`, `claim_number`, `make`, `model`, `cc`, `fuel_type`, `transmission`, `engine_no`, `chasis_no`, `vehicle_no`, `garage`, `garage_address`, `garage_contact_no`, `eor_value`) VALUES
+(1, 'M0119928', 'Toyota', 'Corolla', 1800, 'Petrol', 'Automatic', 'ENG12345', 'CHS67890', 'VEH001', 'Garage ABC', '123 Main Street, City', '123-456-7890', 15000.00),
+(2, 'M0119929', 'Honda', 'Civic', 2000, 'Diesel', 'Manual', 'ENG54321', 'CHS09876', 'VEH002', 'Garage XYZ', '456 Elm Street, City', '098-765-4321', 18000.00),
+(3, 'M0119930', 'Ford', 'Focus', 1600, 'Petrol', 'Automatic', 'ENG11111', 'CHS22222', 'VEH003', 'Garage LMN', '789 Oak Street, City', '555-123-4567', 14000.00),
+(4, 'M0119923', 'Toyota', 'Corolla', 1500, 'Petrol', 'Automatic', 'ENG123456789', 'CHS987654321', 'ABC-123', 'Garage ABC', '123, Rue du Test, Quatre Bornes', '52521212', 105000.00),
+(5, 'M0119925', 'Hyundai', 'i30', 77233, 'Petrol', 'Manuel', '036 NI 09', 'CHS987632', '787273 TG 09', 'Garage T', 'Quatre Bornes', '25327638', 250000.00),
+(6, 'M0119926', 'Mazda', 'BT50', 1200, 'Petrol', 'Manuel', '036 NI 09', 'CHS987654321', '626 GT 23', 'Garage TE', 'Port Louis', '543729836', 105082.00),
+(7, 'M0119931', 'Nissan', 'Altima', 2000, 'Petrol', 'Automatic', 'ENG22222', 'CHS33333', 'VEH004', 'Garage QRS', '321 Pine Street, City', '321-654-9870', 17500.00),
+(8, 'M0119932', 'BMW', 'X5', 3000, 'Diesel', 'Automatic', 'ENG33333', 'CHS44444', 'VEH005', 'Garage UVW', '654 Maple Street, City', '432-987-6540', 45000.00),
+(9, 'M0119933', 'Audi', 'A4', 1800, 'Petrol', 'Manual', 'ENG44444', 'CHS55555', 'VEH006', 'Garage RST', '987 Cedar Avenue, City', '987-654-3210', 38000.00),
+(10, 'M0119934', 'Mercedes', 'C200', 2200, 'Diesel', 'Automatic', 'ENG55555', 'CHS66666', 'VEH007', 'Garage LMN', '159 Oak Avenue, City', '456-789-1230', 42000.00),
+(11, 'M0119935', 'Kia', 'Sportage', 1600, 'Petrol', 'Manual', 'ENG66666', 'CHS77777', 'VEH008', 'Garage OPQ', '753 Birch Street, City', '654-321-0987', 19500.00),
+(12, 'M0119936', 'Toyota', 'Camry', 2500, 'Petrol', 'Automatic', 'ENG77777', 'CHS88888', 'VEH009', 'Garage XYZ', '852 Spruce Street, City', '789-012-3456', 36000.00),
+(13, 'M0119937', 'Volkswagen', 'Golf', 1400, 'Petrol', 'Manual', 'ENG88888', 'CHS99999', 'VEH010', 'Garage DEF', '963 Willow Street, City', '321-987-6540', 22000.00),
+(14, 'M0119938', 'Hyundai', 'Tucson', 2000, 'Diesel', 'Automatic', 'ENG99999', 'CHS11111', 'VEH011', 'Garage GHI', '741 Cherry Avenue, City', '432-123-9870', 33000.00),
+(15, 'M0119939', 'Honda', 'Accord', 1800, 'Petrol', 'Automatic', 'ENG11111', 'CHS22222', 'VEH012', 'Garage JKL', '852 Maple Lane, City', '543-210-6789', 28000.00);
 
 -- --------------------------------------------------------
 
@@ -1321,6 +1539,25 @@ CREATE TABLE IF NOT EXISTS `doctrine_migration_versions` (
 -- --------------------------------------------------------
 
 --
+-- Structure de la table `employment_information`
+--
+
+DROP TABLE IF EXISTS `employment_information`;
+CREATE TABLE IF NOT EXISTS `employment_information` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `users_id` int NOT NULL,
+  `present_occupation` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `company_name` varchar(150) COLLATE utf8mb4_general_ci NOT NULL,
+  `company_address` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `office_phone` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  `monthly_income` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `users_id` (`users_id`) USING BTREE
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `financial_informations`
 --
 
@@ -1333,6 +1570,9 @@ CREATE TABLE IF NOT EXISTS `financial_informations` (
   `bank_name` varchar(150) NOT NULL,
   `bank_account_number` bigint NOT NULL,
   `swift_code` varchar(255) NOT NULL,
+  `bank_holder_name` varchar(50) NOT NULL,
+  `bank_address` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `bank_country` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `users_id_UNIQUE` (`users_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3;
@@ -1341,9 +1581,9 @@ CREATE TABLE IF NOT EXISTS `financial_informations` (
 -- Déchargement des données de la table `financial_informations`
 --
 
-INSERT INTO `financial_informations` (`id`, `users_id`, `vat_number`, `tax_identification_number`, `bank_name`, `bank_account_number`, `swift_code`) VALUES
-(1, 1, 'VAT0012345678', 'TIN4567890123', 'Global Bank PLC', 1234567890123456, 'GLBPPLM0123'),
-(2, 11, '15', '222', 'mcb', 1111111111111, 'V446');
+INSERT INTO `financial_informations` (`id`, `users_id`, `vat_number`, `tax_identification_number`, `bank_name`, `bank_account_number`, `swift_code`, `bank_holder_name`, `bank_address`, `bank_country`) VALUES
+(1, 1, 'VAT0012345678', 'TIN4567890123', 'Global Bank PLC', 1234567890123456, 'GLBPPLM0123', 'Jean Dupont', '10 Rue de la République, Paris', 'France'),
+(2, 11, '15', '222', 'mcb', 1111111111111, 'V446', 'Aisha Patel', '221B Baker Street, London', 'United Kingdom');
 
 -- --------------------------------------------------------
 
@@ -1354,7 +1594,7 @@ INSERT INTO `financial_informations` (`id`, `users_id`, `vat_number`, `tax_ident
 DROP TABLE IF EXISTS `payment`;
 CREATE TABLE IF NOT EXISTS `payment` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `invoice_no` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
+  `invoice_no` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
   `date_submitted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `date_payment` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `status_id` int NOT NULL,
