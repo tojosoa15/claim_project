@@ -60,33 +60,33 @@ class ProfileController extends AbstractController
             $data = [
                 'personal_information' => [
                     'profile_image'          => $profileImageUrl,
-                    'client_name'            => $account->getBusinessName(),
-                    'date_of_birth'          => $account->getDateOfBirth()->format('Y-m-d'),
-                    'nic'                    => $account->getNic(),
-                    'Address'                => $account->getBusinessAddress(),
-                    'country_of_nationality' => $account->getCountryOfNationality(),
-                    'home_number'            => $account->getHomeNumber(),
-                    'mobile_number'          => $account->getPhoneNumber(),
-                    'email_address'          => $account->getEmailAddress(),
-                    'kyc'                    => $account->getKyc()->format('Y-m-d'),
+                    'client_name'            => $account->getBusinessName() ?? null,
+                    'date_of_birth'          => $account->getDateOfBirth()->format('Y-m-d') ?? null,
+                    'nic'                    => $account->getNic()?? null,
+                    'Address'                => $account->getBusinessAddress() ?? null,
+                    'country_of_nationality' => $account->getCountryOfNationality() ?? null,
+                    'home_number'            => $account->getHomeNumber() ?? null,
+                    'mobile_number'          => $account->getPhoneNumber() ?? null,
+                    'email_address'          => $account->getEmailAddress() ?? null,
+                    'kyc'                    => $account->getKyc()->format('Y-m-d') ?? null,
                 ],
                 'financial_information' =>[
-                    'holder_name'           => $financial->getBankHolderName(),
-                    'bank_name'             => $financial->getBankName(),
-                    'bank_account_number'   => $financial->getBankAccountNumber(),
-                    'bank_address'          => $financial->getBankAddress(),
-                    'bank_country'          => $financial->getBankCountry(),
+                    'holder_name'           => $financial->getBankHolderName() ?? null,
+                    'bank_name'             => $financial->getBankName() ?? null,
+                    'bank_account_number'   => $financial->getBankAccountNumber() ?? null,
+                    'bank_address'          => $financial->getBankAddress() ?? null,
+                    'bank_country'          => $financial->getBankCountry() ?? null,
                 ] ,
                 'employment_information' => [
-                    'present_occupation' => $professional->getPresentOccupation(),
-                    'company_name'       => $professional->getCompanyName(),
-                    'company_address'    => $professional->getCompanyAddress(),
-                    'office_phone'       => $professional->getOfficePhone(),
-                    'monthly_income'     => $professional->getMonthlyIncome(),
+                    'present_occupation' => $professional->getPresentOccupation() ?? null,
+                    'company_name'       => $professional->getCompanyName() ?? null,
+                    'company_address'    => $professional->getCompanyAddress() ?? null,
+                    'office_phone'       => $professional->getOfficePhone() ?? null,
+                    'monthly_income'     => $professional->getMonthlyIncome() ?? null,
                 ],
                 'security_settings' => [
-                    'password'     => $account->getPassword(),
-                    'backup_email' => $account->getBackupEmail(),
+                    'password'     => $account->getPassword() ?? null,
+                    'backup_email' => $account->getBackupEmail() ?? null,
                 ],
                 'documents' => $documentsArray
             ];
@@ -122,7 +122,7 @@ class ProfileController extends AbstractController
 
         $em = $doctrine->getManager('claim_user_db');
         $accountRepo = $em->getRepository(\App\Entity\ClaimUser\AccountInformations::class);
-        $account = $accountRepo->findByUserId($userId);
+        $account = $accountRepo->findOneBy(['users' => $userId]);;
 
         if (!$account) {
             return new JsonResponse([

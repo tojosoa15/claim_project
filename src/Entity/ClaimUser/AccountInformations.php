@@ -28,9 +28,9 @@ use Symfony\Component\Validator\Constraints as Assert;
         new GetCollection(
             uriTemplate: '/api/profile',
             controller: ProfileController::class . '::getAllProfile',
-            // parameters: [ 
-            //     'id' => new QueryParameter()
-            // ]
+            parameters: [ 
+                'usersId' => new QueryParameter()
+            ]
         ), 
         new Post(
             uriTemplate: '/api/profile/upload',
@@ -169,7 +169,7 @@ class AccountInformations implements UserInterface, PasswordAuthenticatedUserInt
     /**
      * @var string|null
      *
-     * @ORM\Column(name="profile_image", type="string", length=255, nullable=true)
+     * @ORM\Column(name="profile_image", type="string", length=100, nullable=true)
      */
     private $profileImage;
 

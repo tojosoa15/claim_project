@@ -43,7 +43,7 @@ use Doctrine\ORM\Mapping as ORM;
         ),
         // Profile utilisateur
         new Get(
-            uriTemplate: '/api/profile',
+            uriTemplate: '/api/profile_claim',
             controller: GetUserProfileController::class . '::__invoke',
             parameters: [ 'email' => new QueryParameter()]
         ), 
