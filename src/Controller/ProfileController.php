@@ -159,6 +159,8 @@ class ProfileController extends AbstractController
 
         return new JsonResponse([
             'status' => 'success',
+            'code'    => JsonResponse::HTTP_OK,
+            'message' => 'Successfull change image ',
             'profile_image' => $imageUrl
         ], JsonResponse::HTTP_OK);
     }
