@@ -212,6 +212,7 @@ class DashboardViewController extends AbstractController
                             'month_number'      => $entity->getNavDate()?->format('m'),
                             'year'              => $entity->getNavDate()?->format('Y'),
                             'year_month'        => $entity->getNavDate()?->format('d-M-Y'),
+                            'color'             => $this->generateColorFromString((string) $entity->getId()) // couleur fixe
                         ];
                     }
                 }
@@ -335,5 +336,19 @@ class DashboardViewController extends AbstractController
         }
     }
 
+    /**
+     * Générer une couleur hexadécimale à partir d
+     *  
+     *  @param string $input
+     *  @return string
+     */
+    private function generateColorFromString(string $input): string
+    {
+        // Hash (md5 par exemple)
+        $hash = md5($input);
+
+        // Prendre les 6 premiers caractères → couleur hex
+        return '#' . substr($hash, 0, 6);
+    }
 
 }
