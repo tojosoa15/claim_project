@@ -45,11 +45,11 @@ class DashboardViewController extends AbstractController
             $navFundsFormat = [];
             foreach ($lastNavs as $nav) {
                 $navFundsFormat[] = [
-                    'id'        => $nav->getId(),
-                    'code_name' => $nav->getCodeName(),
-                    'type_nav'  => $nav->getTypeNav(),
-                    'value'     => $nav->getValue(),
-                    'nav_date'  => $nav->getNavDate()?->format('Y-m-d'),
+                    'id'        => $nav?->getId() ?? null,
+                    'code_name' => $nav?->getCodeName() ?? null,
+                    'type_nav'  => $nav?->getTypeNav() ?? null,
+                    'value'     => $nav?->getValue() ?? null,
+                    'nav_date'  => $nav?->getNavDate()?->format('Y-m-d'),
                 ];
             }
 
@@ -125,8 +125,8 @@ class DashboardViewController extends AbstractController
                 // Seulement pour la liste 
                 foreach ($funds as $entity) {
                     if ($entity instanceof \App\Entity\Scs\NavFunds) {
-                        $fund = $entity->getFundId();
-                        $fundId = $fund->getId();
+                        $fund = $entity?->getFundId() ?? null;
+                        $fundId = $fund?->getId() ?? null;
 
                         // Si pas encore défini ou si ce nav est plus récent que le précédent
                         if (
@@ -135,20 +135,20 @@ class DashboardViewController extends AbstractController
                         ) {
                             $fundFormat[] = [
                                 'fund_id'           => $fundId,
-                                'reference'         => $fund->getReference(),
-                                'fund_name'         => $fund->getFundName(),
-                                'no_of_shares'      => $fund->getNoOfShares(),
-                                'total_amount_ccy'  => $fund->getTotalAmountCcy(),
-                                'total_amount_mur'  => $fund->getTotalAmountMur(),
+                                'reference'         => $fund?->getReference() ?? null,
+                                'fund_name'         => $fund?->getFundName() ?? null,
+                                'no_of_shares'      => $fund?->getNoOfShares() ?? null,
+                                'total_amount_ccy'  => $fund?->getTotalAmountCcy() ?? null, 
+                                'total_amount_mur'  => $fund?->getTotalAmountMur() ?? null,
                                 // 'nav_id'            => $entity->getId(),
-                                'avg_nav'           => $entity->getValue(),
-                                'c_name'            => $entity->getTypeNav(),
-                                'nav'               => $entity->getTypeNav().' '.$entity->getValue(),
-                                'nav_date'          => $entity->getNavDate()?->format('Y-m-d'),
-                                'month_name'        => $entity->getNavDate()?->format('F'),
-                                'month_number'      => $entity->getNavDate()?->format('m'),
-                                'year'              => $entity->getNavDate()?->format('Y'),
-                                'year_month'        => $entity->getNavDate()?->format('d-M-Y')
+                                'avg_nav'           => $entity?->getValue() ?? null,
+                                'c_name'            => $entity?->getTypeNav() ?? null,
+                                'nav'               => $entity?->getTypeNav() ?? null . ' ' . $entity?->getValue() ?? null,
+                                'nav_date'          => $entity?->getNavDate()?->format('Y-m-d'),
+                                'month_name'        => $entity?->getNavDate()?->format('F'),
+                                'month_number'      => $entity?->getNavDate()?->format('m'),
+                                'year'              => $entity?->getNavDate()?->format('Y'),
+                                'year_month'        => $entity?->getNavDate()?->format('d-M-Y')
                             ];
                         }
                     }
@@ -194,25 +194,25 @@ class DashboardViewController extends AbstractController
                 // Liste des navs
                 foreach ($funds as $entity) {
                     if ($entity instanceof \App\Entity\Scs\NavFunds) {
-                        $fund = $entity->getFundId();
-                        $fundId = $fund->getId();
+                        $fund = $entity?->getFundId() ?? null;
+                        $fundId = $fund?->getId();
                         // --- Format pour TOUTES les NAVs ---
                         $allNavs[] = [
-                            'id'                => $fund->getId(),
+                            'id'                => $fund?->getId() ?? null,
                             'fund_id'           => $fundId,
-                            'reference'         => $fund->getReference(),
-                            'fund_name'         => $fund->getFundName(),
-                            'no_of_shares'      => $fund->getNoOfShares(),
-                            'total_amount_ccy'  => $fund->getTotalAmountCcy(),
-                            'total_amount_mur'  => $fund->getTotalAmountMur(),
-                            'avg_nav'           => $entity->getValue(),
-                            'c_name'            => $entity->getTypeNav(),
-                            'nav'               => $entity->getTypeNav().' '.$entity->getValue(),
-                            'nav_date'          => $entity->getNavDate()?->format('Y-m-d'),
-                            'month_name'        => $entity->getNavDate()?->format('F'),
-                            'month_number'      => $entity->getNavDate()?->format('m'),
-                            'year'              => $entity->getNavDate()?->format('Y'),
-                            'year_month'        => $entity->getNavDate()?->format('d-M-Y'),
+                            'reference'         => $fund?->getReference() ?? null,
+                            'fund_name'         => $fund?->getFundName() ?? null,
+                            'no_of_shares'      => $fund?->getNoOfShares() ?? null,
+                            'total_amount_ccy'  => $fund?->getTotalAmountCcy() ?? null,
+                            'total_amount_mur'  => $fund?->getTotalAmountMur() ?? null,
+                            'avg_nav'           => $entity?->getValue() ?? null,
+                            'c_name'            => $entity?->getTypeNav() ?? null,
+                            'nav'               => $entity?->getTypeNav() ?? null.' '.$entity?->getValue() ?? null,
+                            'nav_date'          => $entity?->getNavDate()?->format('Y-m-d'),
+                            'month_name'        => $entity?->getNavDate()?->format('F'),
+                            'month_number'      => $entity?->getNavDate()?->format('m'),
+                            'year'              => $entity?->getNavDate()?->format('Y'),
+                            'year_month'        => $entity?->getNavDate()?->format('d-M-Y'),
                             'color'             => $this->generateColorFromString((string) $fundId) // couleur fixe
                         ];
                     }
@@ -254,9 +254,9 @@ class DashboardViewController extends AbstractController
 
             foreach ($forexRate as $nav) {
                 $forexRateFormat[] = [
-                    'id'        => $nav->getId(),
-                    'code_name' => $nav->getType(),
-                    'value'     => $nav->getValue()
+                    'id'        => $nav?->getId() ?? null,
+                    'code_name' => $nav?->getType() ?? null,
+                    'value'     => $nav?->getValue() ?? null
                 ];
             }
 
@@ -313,7 +313,7 @@ class DashboardViewController extends AbstractController
             $navsOnly = array_filter($funds, fn($f) => $f instanceof NavFunds);
 
             $lastNav = array_reduce($navsOnly, function ($carry, NavFunds $nav) {
-                return ($carry === null || $nav->getNavDate() > $carry->getNavDate())
+                return ($carry === null || $nav?->getNavDate() > $carry?->getNavDate())
                     ? $nav
                     : $carry;
             });
@@ -323,7 +323,7 @@ class DashboardViewController extends AbstractController
                 'code'    => JsonResponse::HTTP_OK,
                 'message' => 'Successful Nav and last valuation date.',
                 'data'    => [
-                    'nav_per_share'  => $lastNav->getValue(),
+                    'nav_per_share'  => $lastNav?->getValue(),
                     'valuation_date' => $lastNav?->getNavDate()?->format('d M Y'),
                 ],
             ], JsonResponse::HTTP_OK);
