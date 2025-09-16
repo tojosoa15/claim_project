@@ -4,7 +4,6 @@ namespace App\Controller;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Component\Routing\Annotation\Route;
 
 class ExternalApiController extends AbstractController
 {
@@ -15,10 +14,7 @@ class ExternalApiController extends AbstractController
         $this->client = $client;
     }
 
-    /**
-     * @Route("/api/external/data", name="external_api", methods={"GET"})
-     */
-    public function getExternalData(): JsonResponse
+    public function __invoke(): JsonResponse
     {
         try {
             $response = $this->client->request('GET', $_ENV['EXTERNAL_API_URL'], [
@@ -29,10 +25,7 @@ class ExternalApiController extends AbstractController
 
             $data = $response->toArray();
 
-            return $this->json([
-                'status' => 'success',
-                'data'   => $data,
-            ]);
+            return $this->json($data); // API Platform gère le formatage
         } catch (\Exception $e) {
             return $this->json([
                 'status'  => 'error',

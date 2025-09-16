@@ -111,7 +111,7 @@ class ProfileController extends AbstractController
     public function uploadProfileImage(Request $request, ManagerRegistry $doctrine): JsonResponse
     {
         $userId = $request->request->get('usersId');
-        $file = $request->files->get('profile_image');
+        $file   = $request->files->get('profile_image');
 
         if (!$userId || !$file) {
             return new JsonResponse([

@@ -1,5 +1,5 @@
 <?php
-namespace App\Dto;
+namespace App\DTO;
 
 use ApiPlatform\Metadata\ApiProperty;
 use Symfony\Component\Validator\Constraints as Assert;
