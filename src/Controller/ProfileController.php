@@ -63,7 +63,7 @@ class ProfileController extends AbstractController
                     'client_name'            => $account?->getBusinessName() ?? null,
                     'date_of_birth'          => $account?->getDateOfBirth()->format('Y-m-d') ?? null,
                     'nic'                    => $account?->getNic()?? null,
-                    'Address'                => $account?->getBusinessAddress() ?? null,
+                    'address'                => $account?->getBusinessAddress() ?? null,
                     'country_of_nationality' => $account?->getCountryOfNationality() ?? null,
                     'home_number'            => $account?->getHomeNumber() ?? null,
                     'mobile_number'          => $account?->getPhoneNumber() ?? null,
