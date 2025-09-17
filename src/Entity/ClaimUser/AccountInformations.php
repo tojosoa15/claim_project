@@ -49,6 +49,12 @@ use Symfony\Component\Validator\Constraints as Assert;
             controller: ProfileController::class . '::updateBackupEmail',
             deserialize: false,
             name: 'update_backup_email'
+        ),
+        new Post(
+            uriTemplate: '/api/profile/update-password',
+            controller: ProfileController::class . '::updatePassword',
+            deserialize: false,
+            name: 'update_password'
         )
     ],
 )]

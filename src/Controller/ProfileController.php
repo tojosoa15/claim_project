@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
  use Doctrine\Persistence\ManagerRegistry;
+ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[AsController]
 class ProfileController extends AbstractController
@@ -247,6 +248,53 @@ class ProfileController extends AbstractController
             'data'    => [
                 'backup_email' => $newBackupEmail
     ]
+        ], JsonResponse::HTTP_OK);
+    }
+
+
+    public function updatePassword(
+        Request $request,
+        ManagerRegistry $doctrine,
+        UserPasswordHasherInterface $passwordHasher
+    ): JsonResponse
+    {
+        $userId = $request->request->get('userId');
+        $newPassword = $request->request->get('password');
+
+        if (!$userId || !$newPassword) {
+            return new JsonResponse([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_BAD_REQUEST,
+                'message' => 'User ID and new password are required.'
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        $em = $doctrine->getManager('claim_user_db');
+        $accountRepo = $em->getRepository(\App\Entity\ClaimUser\AccountInformations::class);
+        $account = $accountRepo->findOneBy(['users' => $userId]);
+
+        if (!$account) {
+            return new JsonResponse([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_NOT_FOUND,
+                'message' => 'User not found.'
+            ], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        // Hash du nouveau mot de passe
+        $hashedPassword = $passwordHasher->hashPassword($account, $newPassword);
+        $account->setPassword($hashedPassword);
+
+        $em->persist($account);
+        $em->flush();
+
+        return new JsonResponse([
+            'status'  => 'success',
+            'code'    => JsonResponse::HTTP_OK,
+            'message' => 'Password updated successfully.',
+            'data'    => [
+                'password' => '********' // ne jamais renvoyer le vrai mot de passe
+            ]
         ], JsonResponse::HTTP_OK);
     }
 
