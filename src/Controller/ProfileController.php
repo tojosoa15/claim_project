@@ -201,9 +201,53 @@ class ProfileController extends AbstractController
 
         return new JsonResponse([
             'status' => 'success',
+            'code'    => JsonResponse::HTTP_OK,
             'message' => 'Profile image removed successfully.'
         ], JsonResponse::HTTP_OK);
     }
 
+    public function updateBackupEmail(Request $request, ManagerRegistry $doctrine): JsonResponse
+    {
+        $userId = $request->request->get('userId');
+        $newBackupEmail = $request->request->get('backup_email');
+
+        if (!$userId || !$newBackupEmail) {
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => 'User ID and backup email are required.'
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        $em = $doctrine->getManager('claim_user_db');
+        $accountRepo = $em->getRepository(\App\Entity\ClaimUser\AccountInformations::class);
+        $account = $accountRepo->findOneBy(['users' => $userId]);
+
+        if (!$account) {
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => 'User not found.'
+            ], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        try {
+            $account->setBackupEmail($newBackupEmail);
+            $em->persist($account);
+            $em->flush();
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => 'Failed to update backup email: ' . $e->getMessage()
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return new JsonResponse([
+            'status' => 'success',
+            'code'    => JsonResponse::HTTP_OK,
+            'message' => 'Backup email updated successfully.',
+            'data'    => [
+                'backup_email' => $newBackupEmail
+    ]
+        ], JsonResponse::HTTP_OK);
+    }
 
 }
