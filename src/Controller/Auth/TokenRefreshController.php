@@ -47,7 +47,7 @@ class TokenRefreshController
         $refreshTokenObj = $this->em->getRepository(RefreshTokens::class)->find($refreshToken);
 
         if (!$refreshTokenObj || !$refreshTokenObj->isValid()) {
-            return new JsonResponse(['message' => 'Invalid or expired refresh token'], 401);
+            return new JsonResponse(['message' => 'Invalid or expired refresh token'], 400);
         }
         
         // Optionnel : renouveler le refresh token (ici, on le garde identique)
