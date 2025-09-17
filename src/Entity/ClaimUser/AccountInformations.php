@@ -29,7 +29,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             uriTemplate: '/api/profile',
             controller: ProfileController::class . '::getAllProfile',
             parameters: [ 
-                'usersId' => new QueryParameter()
+                'userId' => new QueryParameter()
             ]
         ), 
         new Post(

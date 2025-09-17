@@ -22,7 +22,7 @@ class ProfileController extends AbstractController
         DocumentRepository $document
     ): JsonResponse
     {
-          $userId = $request->query->get('usersId'); // récupère ?usersId=5
+          $userId = $request->query->get('userId'); // récupère ?userId=5
 
             if (!$userId) {
                 return new JsonResponse([
@@ -110,7 +110,7 @@ class ProfileController extends AbstractController
 
     public function uploadProfileImage(Request $request, ManagerRegistry $doctrine): JsonResponse
     {
-        $userId = $request->request->get('usersId');
+        $userId = $request->request->get('userId');
         $file   = $request->files->get('profile_image');
 
         if (!$userId || !$file) {

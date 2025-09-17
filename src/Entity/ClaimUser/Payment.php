@@ -119,7 +119,7 @@ class Payment
      *
      * @ORM\Column(name="users_id", type="integer", nullable=false)
      */
-    private $usersId;
+    private $userId;
 
     /**
      * @var string
@@ -188,12 +188,12 @@ class Payment
 
     public function getUsersId(): ?int
     {
-        return $this->usersId;
+        return $this->userId;
     }
 
-    public function setUsersId(int $usersId): self
+    public function setUsersId(int $userId): self
     {
-        $this->usersId = $usersId;
+        $this->userId = $userId;
         return $this;
     }
 
