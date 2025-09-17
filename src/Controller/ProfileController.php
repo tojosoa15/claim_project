@@ -9,8 +9,9 @@ use App\Repository\DocumentRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\AsController;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
- use Doctrine\Persistence\ManagerRegistry;
- use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+
 
 #[AsController]
 class ProfileController extends AbstractController
@@ -295,6 +296,39 @@ class ProfileController extends AbstractController
             'data'    => [
                 'password' => '********' // ne jamais renvoyer le vrai mot de passe
             ]
+        ], JsonResponse::HTTP_OK);
+    }
+
+    public function viewDocuments(Request $request, DocumentRepository $documentRepo): JsonResponse
+    {
+        $userId = $request->query->get('userId');
+
+        if (!$userId) {
+            return new JsonResponse([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_BAD_REQUEST,
+                'message' => 'User ID is required.'
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        $documents = $documentRepo->findByUserId($userId);
+
+        $documentsArray = [];
+        foreach ($documents as $document) {
+            $documentsArray[] = [
+                'id'       => $document->getId(),
+                'view_url' => sprintf(
+                    '%s/uploads/documents/%s',
+                    $request->getSchemeAndHttpHost(),
+                    $document->getName()
+                )
+            ];
+        }
+
+        return new JsonResponse([
+            'status'    => 'success',
+            'code'      => JsonResponse::HTTP_OK,
+            'documents' => $documentsArray
         ], JsonResponse::HTTP_OK);
     }
 
