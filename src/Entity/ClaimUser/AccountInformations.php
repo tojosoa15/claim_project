@@ -37,7 +37,14 @@ use Symfony\Component\Validator\Constraints as Assert;
             controller: ProfileController::class . '::uploadProfileImage',
             deserialize: false,
             name: 'upload_profile_image'
-        )   
+        ),
+        new Post(
+            uriTemplate: '/api/profile/remove-image',
+            controller: ProfileController::class . '::removeProfileImage',
+            deserialize: false,
+            name: 'remove_profile_image'
+        )
+  
     ],
 )]
 class AccountInformations implements UserInterface, PasswordAuthenticatedUserInterface

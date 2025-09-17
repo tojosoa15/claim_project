@@ -165,4 +165,45 @@ class ProfileController extends AbstractController
         ], JsonResponse::HTTP_OK);
     }
 
+    public function removeProfileImage(Request $request, ManagerRegistry $doctrine): JsonResponse
+    {
+        $userId = $request->request->get('userId');
+
+        if (!$userId) {
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => 'User ID is required.'
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        $em = $doctrine->getManager('claim_user_db');
+        $accountRepo = $em->getRepository(\App\Entity\ClaimUser\AccountInformations::class);
+        $account = $accountRepo->findOneBy(['users' => $userId]);
+
+        if (!$account) {
+            return new JsonResponse([
+                'status' => 'error',
+                'message' => 'User not found.'
+            ], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        $currentImage = $account->getProfileImage();
+        if ($currentImage) {
+            $filePath = $this->getParameter('profile_images_directory') . '/' . $currentImage;
+            if (file_exists($filePath)) {
+                unlink($filePath); // Supprime le fichier physique
+            }
+
+            $account->setProfileImage(null); // Réinitialise la colonne
+            $em->persist($account);
+            $em->flush();
+        }
+
+        return new JsonResponse([
+            'status' => 'success',
+            'message' => 'Profile image removed successfully.'
+        ], JsonResponse::HTTP_OK);
+    }
+
+
 }
