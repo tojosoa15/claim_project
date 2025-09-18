@@ -38,15 +38,23 @@ class TransactionRepository extends ServiceEntityRepository
             ->setParameter('userId', intval($params['userId']));
 
         // Filtre par fund name
+        // if (!empty($params['searchFundName'])) {
+        //     $qb->andWhere('f.fundName LIKE :fundName')
+        //     ->setParameter('fundName', '%' . $params['searchFundName'] . '%');
+        // }
         if (!empty($params['searchFundName'])) {
-            $qb->andWhere('f.fundName LIKE :fundName')
-            ->setParameter('fundName', '%' . $params['searchFundName'] . '%');
+            $qb->andWhere('f.fundName IN  (:fundName)')
+               ->setParameter('fundName', $params['searchFundName']);
         }
 
         // Filtre par référence de compte
+        // if (!empty($params['searchReference'])) {
+        //     $qb->andWhere('f.reference LIKE :reference')
+        //        ->setParameter('reference', '%'.$params['searchReference'].'%');
+        // }
         if (!empty($params['searchReference'])) {
-            $qb->andWhere('f.reference LIKE :reference')
-               ->setParameter('reference', '%'.$params['searchReference'].'%');
+            $qb->andWhere('f.reference IN  (:reference)')
+               ->setParameter('reference', $params['searchReference']);
         }
 
         // Filtre par type de transaction
