@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Scs\DocumentFund;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Attribute\AsController;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+
+#[AsController]
+class DocumentFundController extends AbstractController
+{
+    public function __construct(
+        private EntityManagerInterface $em,
+        ManagerRegistry $doctrine,
+    ) {
+        $this->em = $doctrine->getManager('scs_db');
+    }
+
+    
+    /**
+     * Get documents by category
+     * 
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getDocumentByCategory(Request $request) : JsonResponse {
+        $category   = $request->query->get('categoryId');
+        
+        if (!$category) {
+            return $this->json([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_BAD_REQUEST,
+                'message' => 'category parameter is required',
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $params = $request->query->all();
+
+            // Si plusieurs noms de fonds sont passés en paramètre, on les transforme en tableau
+            if (!empty($params['searchFundName']) && is_string($params['searchFundName'])) {
+                $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
+            }
+
+            $documents = $this->em->getRepository(DocumentFund::class)->findByCategory($params);
+
+            if (empty($documents)) {
+                return $this->json([
+                    'status'  => 'success',
+                    'code'    => JsonResponse::HTTP_OK,
+                    'message' => 'No documents found for this category.',
+                    'data'    => null,
+                ], JsonResponse::HTTP_OK);
+            }
+
+            // On formate les données comme tu veux
+            $data = array_map(function (DocumentFund $doc) {
+                return [
+                    'id'         => $doc->getId(),
+                    'name'       => $doc->getDocName(),
+                    'path'       => $doc->getPath(),
+                    'fund_name'  => $doc->getFundId() ? $doc->getFundId()->getFundName() : null,
+                    'category'   => $doc->getCategoryId() ? $doc->getCategoryId()->getCategoryName() : null,
+                    'created_at' => $doc->getCreatedAt()?->format('d-M-Y'),
+                ];
+            }, $documents);
+
+            return $this->json([
+                'status'  => 'success',
+                'code'    => JsonResponse::HTTP_OK,
+                'message' => 'Successful Document list.',
+                'data'    => $data,
+            ], JsonResponse::HTTP_OK);
+
+        } catch  (\Exception $e) {
+            return $this->json([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
+                'message' => $e->getMessage(),
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+    }
+}

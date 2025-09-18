@@ -50,15 +50,24 @@ class TransactionRepository extends ServiceEntityRepository
         }
 
         // Filtre par type de transaction
+        // if (!empty($params['searchTransactionType'])) {
+        //     $qb->andWhere('tt.name LIKE :transactionType')
+        //        ->setParameter('transactionType', '%'.$params['searchTransactionType'].'%');
+        // }
         if (!empty($params['searchTransactionType'])) {
-            $qb->andWhere('tt.name LIKE :transactionType')
-               ->setParameter('transactionType', '%'.$params['searchTransactionType'].'%');
+            $qb->andWhere('tt.name IN  (:ttName)')
+               ->setParameter('ttName', $params['searchTransactionType']);
         }
 
          // Filtre par type de transaction
+        // if (!empty($params['searchCurrency'])) {
+        //     $qb->andWhere('t.currency LIKE :currency')
+        //        ->setParameter('currency', '%'.$params['searchCurrency'].'%');
+        // }
+
         if (!empty($params['searchCurrency'])) {
-            $qb->andWhere('t.currency LIKE :currency')
-               ->setParameter('currency', '%'.$params['searchCurrency'].'%');
+            $qb->andWhere('t.currency IN  (:currency)')
+               ->setParameter('currency', $params['searchCurrency']);
         }
 
         // Tri

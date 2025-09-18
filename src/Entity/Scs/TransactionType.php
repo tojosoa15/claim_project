@@ -2,6 +2,9 @@
 
 namespace App\Entity\Scs;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GetCollection;
+use App\Controller\TransactionHistoryController;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -10,6 +13,14 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Table(name="transaction_type")
  * @ORM\Entity
  */
+#[ApiResource(
+    operations: [
+        new GetCollection(
+            uriTemplate: '/api/transaction-types',
+            controller: TransactionHistoryController::class . '::getAllDocumentType'
+        ),    
+    ],
+)]
 class TransactionType
 {
     /**
