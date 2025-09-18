@@ -56,6 +56,11 @@ use Doctrine\ORM\Mapping as ORM;
                     required: false,
                     schema: ['type' => 'string']
                 ),
+                'searchCnNumber' => new QueryParameter(
+                    description: 'Recherche par cn number',
+                    required: false,
+                    schema: ['type' => 'string']
+                ),
                 'searchCurrency' => new QueryParameter(
                     description: 'Recherche par currency',
                     required: false,

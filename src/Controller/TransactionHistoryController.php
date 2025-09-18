@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Scs\Transaction;
+use App\Repository\TransactionTypeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,6 +17,7 @@ class TransactionHistoryController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         ManagerRegistry $doctrine,
+        private TransactionTypeRepository $transactionTypeRepository
     ) {
         $this->em = $doctrine->getManager('scs_db');
     }
@@ -39,6 +41,16 @@ class TransactionHistoryController extends AbstractController
             // $transactions = $this->em->getRepository(Transaction::class)->findByUserId(intval($userId));
             $params = $request->query->all();
 
+            // Manage array for transaction type filter
+            if (!empty($params['searchTransactionType']) && is_string($params['searchTransactionType'])) {
+                $params['searchTransactionType'] = array_map('trim', explode(',', $params['searchTransactionType']));
+            }
+
+            // Manage array for currency filter
+            if (!empty($params['searchCurrency']) && is_string($params['searchCurrency'])) {
+                $params['searchCurrency'] = array_map('trim', explode(',', $params['searchCurrency']));
+            }
+
             $transactions = $this->em
                 ->getRepository(Transaction::class)
                 ->findByUserIdWithFilters($params);
@@ -57,6 +69,30 @@ class TransactionHistoryController extends AbstractController
                 'code'    => JsonResponse::HTTP_OK,
                 'message' => 'Successful transaction list.',
                 'data'    => $transactions,
+            ], JsonResponse::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
+                'message' => $e->getMessage(),
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Récupérer tous les types de documents
+     */
+    public function getAllDocumentType(): JsonResponse
+    {
+        try {
+            $types = $this->transactionTypeRepository->findAllTypes();
+
+            return $this->json([
+                'status'  => 'success',
+                'code'    => JsonResponse::HTTP_OK,
+                'message' => 'Successful TransactionType list.',
+                'data'    => $types,
             ], JsonResponse::HTTP_OK);
 
         } catch (\Exception $e) {
