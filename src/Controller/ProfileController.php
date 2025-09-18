@@ -299,41 +299,43 @@ class ProfileController extends AbstractController
         ], JsonResponse::HTTP_OK);
     }
 
-
     public function viewDocuments(Request $request, DocumentRepository $documentRepo): JsonResponse
-    {
-        $userId = $request->query->get('userId');
-        $documentId = $request->query->get('documentId');
+{
+    $userId = $request->query->get('userId');
+    $documentId = $request->query->get('documentId');
 
-        if (!$userId) {
-            return new JsonResponse([
-                'status'  => 'error',
-                'code'    => JsonResponse::HTTP_BAD_REQUEST,
-                'message' => 'User ID is required.'
-            ], JsonResponse::HTTP_BAD_REQUEST);
-        }
-
-        $documents = $documentRepo->findByUserAndDocumentId($userId,
-        $documentId ? (int) $documentId : null);
-
-        $documentsArray = [];
-        foreach ($documents as $document) {
-            $documentsArray[] = [
-                'id'       => $document->getId(),
-                'view_url' => sprintf(
-                    '%s/uploads/documents/%s',
-                    $request->getSchemeAndHttpHost(),
-                    $document->getName()
-                )
-            ];
-        }
-
+    if (!$userId || !$documentId) {
         return new JsonResponse([
-            'status'    => 'success',
-            'code'      => JsonResponse::HTTP_OK,
-            'data' => $documentsArray
-        ], JsonResponse::HTTP_OK);
+            'status'  => 'error',
+            'code'    => JsonResponse::HTTP_BAD_REQUEST,
+            'message' => 'User ID and Document ID are required.'
+        ], JsonResponse::HTTP_BAD_REQUEST);
     }
+
+    $document = $documentRepo->findOneByUserAndDocumentId((int) $userId, (int) $documentId);
+
+    if (!$document) {
+        return new JsonResponse([
+            'status'  => 'error',
+            'code'    => JsonResponse::HTTP_NOT_FOUND,
+            'message' => 'Document not found.'
+        ], JsonResponse::HTTP_NOT_FOUND);
+    }
+
+    return new JsonResponse([
+        'status' => 'success',
+        'code'   => JsonResponse::HTTP_OK,
+        'data'   => [
+            'id'       => $document->getId(),
+            'view_url' => sprintf(
+                '%s/uploads/documents/%s',
+                $request->getSchemeAndHttpHost(),
+                $document->getPath()
+            )
+        ]
+    ], JsonResponse::HTTP_OK);
+}
+
 
 
 }
