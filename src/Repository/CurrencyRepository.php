@@ -19,8 +19,8 @@ class CurrencyRepository extends ServiceEntityRepository
     public function findAllCurrency(): array
     {
         return $this->createQueryBuilder('tt')
-            ->select('tt.id', 'tt.typeCcy')
-            ->orderBy('tt.typeCcy', 'ASC')
+            ->select('tt.id', 'tt.name')
+            ->orderBy('tt.name', 'ASC')
             ->getQuery()
             ->getArrayResult();
     }

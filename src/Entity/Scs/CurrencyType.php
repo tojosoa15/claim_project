@@ -37,7 +37,7 @@ class CurrencyType
      *
      * @ORM\Column(name="type_ccy", type="string", length=45, nullable=true)
      */
-    private $typeCcy;
+    private $name;
 
     
 
@@ -48,12 +48,12 @@ class CurrencyType
 
     public function getTypeCcy(): ?string
     {
-        return $this->typeCcy;
+        return $this->name;
     }
 
-    public function setTypeCcy(?string $typeCcy): static
+    public function setTypeCcy(?string $name): static
     {
-        $this->typeCcy = $typeCcy;
+        $this->name = $name;
 
         return $this;
     }
