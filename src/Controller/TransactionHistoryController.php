@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Scs\Transaction;
 use App\Repository\TransactionTypeRepository;
+use App\Repository\CurrencyRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,7 +18,8 @@ class TransactionHistoryController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         ManagerRegistry $doctrine,
-        private TransactionTypeRepository $transactionTypeRepository
+        private TransactionTypeRepository $transactionTypeRepository,
+        private CurrencyRepository $currencyRepository
     ) {
         $this->em = $doctrine->getManager('scs_db');
     }
@@ -92,6 +94,27 @@ class TransactionHistoryController extends AbstractController
                 'status'  => 'success',
                 'code'    => JsonResponse::HTTP_OK,
                 'message' => 'Successful TransactionType list.',
+                'data'    => $types,
+            ], JsonResponse::HTTP_OK);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_INTERNAL_SERVER_ERROR,
+                'message' => $e->getMessage(),
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+        public function getAllCurrency(): JsonResponse
+    {
+        try {
+            $types = $this->currencyRepository->findAllCurrency();
+
+            return $this->json([
+                'status'  => 'success',
+                'code'    => JsonResponse::HTTP_OK,
+                'message' => 'Successful Currency list.',
                 'data'    => $types,
             ], JsonResponse::HTTP_OK);
 
