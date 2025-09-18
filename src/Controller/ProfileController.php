@@ -16,6 +16,16 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 #[AsController]
 class ProfileController extends AbstractController
 {
+    /**
+     * Récupérer le profil complet d'un utilisateur
+     * 
+     * @param Request $request
+     * @param AccountInformationsRepository $accountRepo    
+     * @param FinancialInformationsRepository $financialRepo
+     * @param EmploymentInformationRepository $employRepo
+     * @param DocumentRepository $document
+     * @return JsonResponse
+     */
     public function getAllProfile(
         Request $request,
         AccountInformationsRepository $accountRepo,
@@ -109,7 +119,12 @@ class ProfileController extends AbstractController
         }
     }
 
-
+    /**
+     * Upload profile image
+     * 
+     * @param Request $request
+     * @param ManagerRegistry $doctrine
+     */
     public function uploadProfileImage(Request $request, ManagerRegistry $doctrine): JsonResponse
     {
         $userId = $request->request->get('userId');
@@ -167,6 +182,12 @@ class ProfileController extends AbstractController
         ], JsonResponse::HTTP_OK);
     }
 
+    /**
+     * Remove profile image
+     * 
+     * @param Request $request
+     * @param ManagerRegistry $doctrine
+     */
     public function removeProfileImage(Request $request, ManagerRegistry $doctrine): JsonResponse
     {
         $userId = $request->request->get('userId');
@@ -208,6 +229,12 @@ class ProfileController extends AbstractController
         ], JsonResponse::HTTP_OK);
     }
 
+    /**
+     * Update backup email
+     * 
+     * @param Request $request
+     * @param ManagerRegistry $doctrine
+     */
     public function updateBackupEmail(Request $request, ManagerRegistry $doctrine): JsonResponse
     {
         $userId = $request->request->get('userId');
@@ -252,7 +279,13 @@ class ProfileController extends AbstractController
         ], JsonResponse::HTTP_OK);
     }
 
-
+    /**
+     * Update user password
+     * 
+     * @param Request $request
+     * @param ManagerRegistry $doctrine
+     * @param UserPasswordHasherInterface $passwordHasher
+     */
     public function updatePassword(
         Request $request,
         ManagerRegistry $doctrine,
@@ -299,6 +332,13 @@ class ProfileController extends AbstractController
         ], JsonResponse::HTTP_OK);
     }
 
+
+    /**
+     * View user documents
+     * 
+     * @param Request $request
+     * @param DocumentRepository $documentRepo
+     */
     public function viewDocuments(Request $request, DocumentRepository $documentRepo): JsonResponse
 {
     $userId = $request->query->get('userId');

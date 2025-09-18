@@ -3,6 +3,7 @@
 namespace App\Entity\Scs;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\QueryParameter;
 use App\Controller\DocumentFundController;
@@ -28,6 +29,14 @@ use Dom\Document;
                 'sortBy'            => new QueryParameter(),
             ]
         ),    
+         new Get(
+            uriTemplate: '/api/fund/documents/view',
+            controller: DocumentFundController::class . '::viewFundDocuments',
+            name: 'view_document',
+            parameters: [ 
+                'documentId'    => new QueryParameter(),
+            ]
+        ), 
     ],
 )]
 class DocumentFund

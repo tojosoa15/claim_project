@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Scs\DocumentFund;
+use App\Repository\DocumentFundRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\HttpFoundation\Request;
@@ -84,5 +85,44 @@ class DocumentFundController extends AbstractController
             ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    /**
+     * View user documents
+     * 
+     * @param Request $request
+     * @param DocumentFundRepository $documentRepo
+     */
+    public function viewFundDocuments(Request $request, DocumentFundRepository $documentRepo): JsonResponse
+    {
+        $documentId = $request->query->get('documentId');
+
+        if (!$documentId) {
+            return new JsonResponse([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_BAD_REQUEST,
+                'message' => 'documentId ID is required.'
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // $documents = $documentRepo->findDocumentById($documentId);
+        $document = $documentRepo->find((int)$documentId);
+
+        $documentsArray = [];
+
+        $documentsArray[] = [
+            'id'       => $document->getId(),
+            'view_url' => sprintf(
+                '%s/uploads/documents/%s',
+                $request->getSchemeAndHttpHost(),
+                $document->getDocName()
+            )
+        ];
+
+        return new JsonResponse([
+            'status'    => 'success',
+            'code'      => JsonResponse::HTTP_OK,
+            'documents' => $documentsArray
+        ], JsonResponse::HTTP_OK);
     }
 }

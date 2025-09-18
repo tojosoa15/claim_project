@@ -5,7 +5,7 @@ namespace App\Entity\ClaimUser;
 use App\Controller\ProfileController;
 use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\QueryParameter;
 
 /**
@@ -17,7 +17,7 @@ use ApiPlatform\Metadata\QueryParameter;
 
 #[ApiResource(
     operations: [
-        new GetCollection(
+        new Get(
             uriTemplate: '/api/profile/documents/view',
             controller: ProfileController::class . '::viewDocuments',
             name: 'view_document',

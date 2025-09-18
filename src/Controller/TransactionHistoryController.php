@@ -43,6 +43,16 @@ class TransactionHistoryController extends AbstractController
             // $transactions = $this->em->getRepository(Transaction::class)->findByUserId(intval($userId));
             $params = $request->query->all();
 
+            // Manage array for fund name filter
+            if (!empty($params['searchFundName']) && is_string($params['searchFundName'])) {
+                $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
+            }
+
+            // Manage array for reference filter
+            if (!empty($params['searchReference']) && is_string($params['searchReference'])) {
+                $params['searchReference'] = array_map('trim', explode(',', $params['searchReference']));
+            }
+
             // Manage array for transaction type filter
             if (!empty($params['searchTransactionType']) && is_string($params['searchTransactionType'])) {
                 $params['searchTransactionType'] = array_map('trim', explode(',', $params['searchTransactionType']));
