@@ -17,14 +17,19 @@ class DocumentRepository extends ServiceEntityRepository
     }
 
     // EmploymentInformationsRepository.php
-    public function findByUserId(int $userId): array
-{
-    return $this->createQueryBuilder('d')
-        ->where('d.users = :userId')
-        ->setParameter('userId', $userId)
-        ->getQuery()
-        ->getResult();
-}
+    public function findByUserAndDocumentId(int $userId, ?int $documentId = null): array
+    {
+        $qb = $this->createQueryBuilder('d')
+            ->where('d.users = :userId')
+            ->setParameter('userId', $userId);
+
+        if ($documentId !== null) {
+            $qb->andWhere('d.id = :documentId')
+               ->setParameter('documentId', $documentId);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 
 
 }

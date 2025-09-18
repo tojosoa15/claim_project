@@ -299,9 +299,11 @@ class ProfileController extends AbstractController
         ], JsonResponse::HTTP_OK);
     }
 
+
     public function viewDocuments(Request $request, DocumentRepository $documentRepo): JsonResponse
     {
         $userId = $request->query->get('userId');
+        $documentId = $request->query->get('documentId');
 
         if (!$userId) {
             return new JsonResponse([
@@ -311,7 +313,8 @@ class ProfileController extends AbstractController
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        $documents = $documentRepo->findByUserId($userId);
+        $documents = $documentRepo->findByUserAndDocumentId($userId,
+        $documentId ? (int) $documentId : null);
 
         $documentsArray = [];
         foreach ($documents as $document) {
@@ -328,8 +331,9 @@ class ProfileController extends AbstractController
         return new JsonResponse([
             'status'    => 'success',
             'code'      => JsonResponse::HTTP_OK,
-            'documents' => $documentsArray
+            'data' => $documentsArray
         ], JsonResponse::HTTP_OK);
     }
+
 
 }

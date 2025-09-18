@@ -22,7 +22,8 @@ use ApiPlatform\Metadata\QueryParameter;
             controller: ProfileController::class . '::viewDocuments',
             name: 'view_document',
             parameters: [ 
-                'userId' => new QueryParameter()
+                'userId' => new QueryParameter(),
+                'documentId' => new QueryParameter(),
             ]
         ),
     ]
