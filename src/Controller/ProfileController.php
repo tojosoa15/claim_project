@@ -340,9 +340,32 @@ class ProfileController extends AbstractController
      * @param DocumentRepository $documentRepo
      */
     public function viewDocuments(Request $request, DocumentRepository $documentRepo): JsonResponse
-{
-    $userId = $request->query->get('userId');
-    $documentId = $request->query->get('documentId');
+    {
+        $userId = $request->query->get('userId');
+        $documentId = $request->query->get('documentId');
+
+        if (!$userId) {
+            return new JsonResponse([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_BAD_REQUEST,
+                'message' => 'User ID is required.'
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        $documents = $documentRepo->findOneByUserAndDocumentId($userId,
+        $documentId ? (int) $documentId : null);
+
+        $documentsArray = [];
+        foreach ($documents as $document) {
+            $documentsArray[] = [
+                'id'       => $document->getId(),
+                'view_url' => sprintf(
+                    '%s/uploads/documents/%s',
+                    $request->getSchemeAndHttpHost(),
+                    $document->getName()
+                )
+            ];
+        }
 
     if (!$userId || !$documentId) {
         return new JsonResponse([
