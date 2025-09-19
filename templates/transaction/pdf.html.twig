@@ -1,0 +1,114 @@
+{# templates/transaction/pdf.html.twig #}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Transaction history</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 20px;
+        }
+
+        h2 {
+            text-align: left;
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        thead {
+            background-color: #f2f2f2;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        th {
+            font-weight: bold;
+        }
+
+        .type-additional {
+            color: green;
+            font-weight: bold;
+        }
+
+        .type-gifts {
+            color: green;
+            font-weight: bold;
+        }
+
+        .type-switch-out {
+            color: red;
+            font-weight: bold;
+        }
+
+        .type-switch-in {
+            color: blue;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 11px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <h2>Transaction history</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Fund Name</th>
+                <th>Sub account Reference</th>
+                <th>Transaction Type</th>
+                <th>CN Number</th>
+                <th>No of Units</th>
+                <th>Net Amount (MUR)</th>
+                <th>Currency</th>
+                <th>Net Amount Invested/ Redeemed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transaction.items %}
+                <tr>
+                    <td>{{ t.date }}</td>
+                    <td>{{ t.fund_name }}</td>
+                    <td>{{ t.sub_account_reference }}</td>
+                    <td
+                        class="
+                            {% if 'Additional' in t.transaction_type %}type-additional{% endif %}
+                            {% if 'Gift' in t.transaction_type %}type-gifts{% endif %}
+                            {% if 'Switch out' in t.transaction_type %}type-switch-out{% endif %}
+                            {% if 'Switch in' in t.transaction_type %}type-switch-in{% endif %}
+                        "
+                    >
+                        {{ t.transaction_type }}
+                    </td>
+                    <td>{{ t.cn_number }}</td>
+                    <td>{{ t.no_of_units|number_format(0, '.', ',') }}</td>
+                    <td>{{ t.net_amount_mur|number_format(2, '.', ',') }}</td>
+                    <td>{{ t.currency }}</td>
+                    <td>{{ t.net_amount_inv_redeemed|number_format(2, '.', ',') }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Total Transactions: {{ transaction.total_transaction }}
+    </div>
+</body>
+</html>
