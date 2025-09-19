@@ -17,6 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ApiResource(
     operations: [
+        // Récupérer l’historique des transactions d’un utilisateur
         new GetCollection(
             uriTemplate: '/api/transactions',
             controller: TransactionHistoryController::class . '::getAllTransactionHistory',
@@ -68,6 +69,58 @@ use Doctrine\ORM\Mapping as ORM;
                 ),
             ]
         ),    
+        // Export des transactions    
+        new GetCollection(
+            uriTemplate: '/api/transactions/export',
+            controller: TransactionHistoryController::class . '::transactionExport',
+            parameters: [
+                'userId' => new QueryParameter(
+                    description: 'ID de l’utilisateur (obligatoire)',
+                    required: true,
+                    schema: ['type' => 'integer']
+                ),
+                'page' => new QueryParameter(
+                    description: 'Numéro de page (par défaut: 1)',
+                    required: false,
+                    schema: ['type' => 'integer']
+                ),
+                'limit' => new QueryParameter(
+                    description: 'Nombre d’éléments par page (par défaut: 10)',
+                    required: false,
+                    schema: ['type' => 'integer']
+                ),
+                'sortBy' => new QueryParameter(
+                    description: 'Champ et ordre de tri. Exemple: date-DESC, fund_name-ASC',
+                    required: false,
+                    schema: ['type' => 'string']
+                ),
+                'searchFundName' => new QueryParameter(
+                    description: 'Recherche par nom du fond',
+                    required: false,
+                    schema: ['type' => 'string']
+                ),
+                'searchReference' => new QueryParameter(
+                    description: 'Recherche par référence de compte',
+                    required: false,
+                    schema: ['type' => 'string']
+                ),
+                'searchTransactionType' => new QueryParameter(
+                    description: 'Recherche par type de transaction',
+                    required: false,
+                    schema: ['type' => 'string']
+                ),
+                'searchCnNumber' => new QueryParameter(
+                    description: 'Recherche par cn number',
+                    required: false,
+                    schema: ['type' => 'string']
+                ),
+                'searchCurrency' => new QueryParameter(
+                    description: 'Recherche par currency',
+                    required: false,
+                    schema: ['type' => 'string']
+                ),
+            ]
+        ),
     ],
 )]
 class Transaction
