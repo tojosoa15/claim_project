@@ -42,9 +42,20 @@ class TransactionRepository extends ServiceEntityRepository
         //     $qb->andWhere('f.fundName LIKE :fundName')
         //     ->setParameter('fundName', '%' . $params['searchFundName'] . '%');
         // }
+        // if (!empty($params['searchFundName'])) {
+        //     $qb->andWhere('f.fundName IN  (:fundName)')
+        //        ->setParameter('fundName', $params['searchFundName']);
+        // }
         if (!empty($params['searchFundName'])) {
-            $qb->andWhere('f.fundName IN  (:fundName)')
-               ->setParameter('fundName', $params['searchFundName']);
+            if (is_array($params['searchFundName'])) {
+                // Cas recherche multiple stricte
+                $qb->andWhere('f.fundName IN (:fundName)')
+                ->setParameter('fundName', $params['searchFundName']);
+            } else {
+                // Cas recherche rapide
+                $qb->andWhere('f.fundName LIKE :fundName')
+                ->setParameter('fundName', '%' . $params['searchFundName'] . '%');
+            }
         }
 
         // Filtre par référence de compte
@@ -52,9 +63,20 @@ class TransactionRepository extends ServiceEntityRepository
         //     $qb->andWhere('f.reference LIKE :reference')
         //        ->setParameter('reference', '%'.$params['searchReference'].'%');
         // }
+        // if (!empty($params['searchReference'])) {
+        //     $qb->andWhere('f.reference IN  (:reference)')
+        //        ->setParameter('reference', $params['searchReference']);
+        // }
         if (!empty($params['searchReference'])) {
-            $qb->andWhere('f.reference IN  (:reference)')
-               ->setParameter('reference', $params['searchReference']);
+            if (is_array($params['searchReference'])) {
+                // Cas recherche multiple stricte
+                $qb->andWhere('f.reference IN (:reference)')
+                ->setParameter('reference', $params['searchReference']);
+            } else {
+                // Cas recherche rapide
+                $qb->andWhere('f.reference LIKE :reference')
+                ->setParameter('reference', '%' . $params['searchReference'] . '%');
+            }
         }
 
         // Filtre par type de transaction
@@ -67,7 +89,12 @@ class TransactionRepository extends ServiceEntityRepository
                ->setParameter('ttName', $params['searchTransactionType']);
         }
 
-         // Filtre par type de transaction
+        if (!empty($params['searchCnNumber'])) {
+            $qb->andWhere('t.cnNumber LIKE :cnNumber')
+               ->setParameter('cnNumber', '%'.$params['searchCnNumber'].'%');
+        }
+
+        // Filtre par currency
         // if (!empty($params['searchCurrency'])) {
         //     $qb->andWhere('t.currency LIKE :currency')
         //        ->setParameter('currency', '%'.$params['searchCurrency'].'%');

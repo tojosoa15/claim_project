@@ -46,14 +46,32 @@ class TransactionHistoryController extends AbstractController
             // $transactions = $this->em->getRepository(Transaction::class)->findByUserId(intval($userId));
             $params = $request->query->all();
 
-            // Manage array for fund name filter
+            // Manage array or single string for fund name filter
+            // if (!empty($params['searchFundName']) && is_string($params['searchFundName'])) {
+            //     $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
+            // } 
             if (!empty($params['searchFundName']) && is_string($params['searchFundName'])) {
-                $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
+                if (strpos($params['searchFundName'], ',') !== false) {
+                    // Plusieurs valeurs séparées par virgule → transforme en tableau
+                    $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
+                } else {
+                    // Une seule valeur → laisse en string pour LIKE
+                    $params['searchFundName'] = trim($params['searchFundName']);
+                }
             }
 
             // Manage array for reference filter
+            // if (!empty($params['searchReference']) && is_string($params['searchReference'])) {
+            //     $params['searchReference'] = array_map('trim', explode(',', $params['searchReference']));
+            // }
             if (!empty($params['searchReference']) && is_string($params['searchReference'])) {
-                $params['searchReference'] = array_map('trim', explode(',', $params['searchReference']));
+                if (strpos($params['searchReference'], ',') !== false) {
+                    // Plusieurs valeurs séparées par virgule → transforme en tableau
+                    $params['searchReference'] = array_map('trim', explode(',', $params['searchReference']));
+                } else {
+                    // Une seule valeur → laisse en string pour LIKE
+                    $params['searchReference'] = trim($params['searchReference']);
+                }
             }
 
             // Manage array for transaction type filter
@@ -162,14 +180,32 @@ class TransactionHistoryController extends AbstractController
         try {
             $params = $request->query->all();
 
-            // Manage array for fund name filter
+           // Manage array or single string for fund name filter
+            // if (!empty($params['searchFundName']) && is_string($params['searchFundName'])) {
+            //     $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
+            // } 
             if (!empty($params['searchFundName']) && is_string($params['searchFundName'])) {
-                $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
+                if (strpos($params['searchFundName'], ',') !== false) {
+                    // Plusieurs valeurs séparées par virgule → transforme en tableau
+                    $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
+                } else {
+                    // Une seule valeur → laisse en string pour LIKE
+                    $params['searchFundName'] = trim($params['searchFundName']);
+                }
             }
 
             // Manage array for reference filter
+            // if (!empty($params['searchReference']) && is_string($params['searchReference'])) {
+            //     $params['searchReference'] = array_map('trim', explode(',', $params['searchReference']));
+            // }
             if (!empty($params['searchReference']) && is_string($params['searchReference'])) {
-                $params['searchReference'] = array_map('trim', explode(',', $params['searchReference']));
+                if (strpos($params['searchReference'], ',') !== false) {
+                    // Plusieurs valeurs séparées par virgule → transforme en tableau
+                    $params['searchReference'] = array_map('trim', explode(',', $params['searchReference']));
+                } else {
+                    // Une seule valeur → laisse en string pour LIKE
+                    $params['searchReference'] = trim($params['searchReference']);
+                }
             }
 
             // Manage array for transaction type filter
