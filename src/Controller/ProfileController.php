@@ -313,7 +313,7 @@ class ProfileController extends AbstractController
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        $documents = $documentRepo->findByUserAndDocumentId($userId,
+        $documents = $documentRepo->findOneByUserAndDocumentId($userId,
         $documentId ? (int) $documentId : null);
 
         $documentsArray = [];

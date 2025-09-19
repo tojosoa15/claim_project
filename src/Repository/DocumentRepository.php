@@ -16,19 +16,30 @@ class DocumentRepository extends ServiceEntityRepository
         parent::__construct($registry, Document::class);
     }
 
-    // EmploymentInformationsRepository.php
-    public function findByUserAndDocumentId(int $userId, ?int $documentId = null): array
+   /**
+     * Récupérer tous les documents d'un utilisateur
+     */
+    public function findByUserId(int $userId): array
     {
-        $qb = $this->createQueryBuilder('d')
+        return $this->createQueryBuilder('d')
             ->where('d.users = :userId')
-            ->setParameter('userId', $userId);
+            ->setParameter('userId', $userId)
+            ->getQuery()
+            ->getResult();
+    }
 
-        if ($documentId !== null) {
-            $qb->andWhere('d.id = :documentId')
-               ->setParameter('documentId', $documentId);
-        }
-
-        return $qb->getQuery()->getResult();
+    /**
+     * Récupérer un seul document avec userId + documentId
+     */
+    public function findOneByUserAndDocumentId(int $userId, int $documentId): ?Document
+    {
+        return $this->createQueryBuilder('d')
+            ->where('d.users = :userId')
+            ->andWhere('d.id = :documentId')
+            ->setParameter('userId', $userId)
+            ->setParameter('documentId', $documentId)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
 
