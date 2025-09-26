@@ -29,15 +29,32 @@ class DocumentFundController extends AbstractController
      * @return JsonResponse
      */
     public function getDocumentByCategory(Request $request) : JsonResponse {
-        $category   = $request->query->get('categoryId');
+        $category   = $request->query->get('slug');
         
         if (!$category) {
             return $this->json([
                 'status'  => 'error',
                 'code'    => JsonResponse::HTTP_BAD_REQUEST,
-                'message' => 'category parameter is required',
+                'message' => 'Slug parameter is required',
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
+
+       $slugToCategoryId = [
+            'statements'       => 1,
+            'factssheets'      => 2,
+            'contract-notes'   => 3,
+            'devidend-notices' => 4,
+        ];
+
+        if (!isset($slugToCategoryId[$category])) {
+            return $this->json([
+                'status'  => 'error',
+                'code'    => JsonResponse::HTTP_BAD_REQUEST,
+                'message' => 'Invalid slug parameter',
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        $categoryId = $slugToCategoryId[$category];
 
         try {
             $params = $request->query->all();
@@ -47,7 +64,7 @@ class DocumentFundController extends AbstractController
                 $params['searchFundName'] = array_map('trim', explode(',', $params['searchFundName']));
             }
 
-            $documents = $this->em->getRepository(DocumentFund::class)->findByCategory($params);
+            $documents = $this->em->getRepository(DocumentFund::class)->findByCategory($categoryId, $params);
 
             if (empty($documents)) {
                 return $this->json([

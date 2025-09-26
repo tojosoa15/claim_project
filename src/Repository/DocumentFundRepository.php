@@ -16,13 +16,13 @@ class DocumentFundRepository extends ServiceEntityRepository
     /**
      * Récupère les documents par id de catégorie
      */
-    public function findByCategory(array $params): array
+    public function findByCategory(int $categoryId, array $params): array
     {
         $qb = $this->createQueryBuilder('d')
             ->join('d.categoryId', 'c')
             ->leftJoin('d.fundId', 'f')
             ->andWhere('c.id = :categoryId')
-            ->setParameter('categoryId', $params['categoryId'])
+            ->setParameter('categoryId', $categoryId)
             ->orderBy('d.createdAt', 'DESC');
 
         if (!empty($params['searchDocName'])) {
