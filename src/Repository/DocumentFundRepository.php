@@ -31,7 +31,7 @@ class DocumentFundRepository extends ServiceEntityRepository
         }
 
         if (!empty($params['searchFundName'])) {
-            $qb->andWhere('f.fundName IN  (:fundName)')
+            $qb->andWhere('f.fundName LIKE :fundName')
                ->setParameter('fundName', $params['searchFundName']);
         }
 

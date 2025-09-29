@@ -34,7 +34,9 @@ class ProfileController extends AbstractController
         DocumentRepository $document
     ): JsonResponse
     {
-          $userId = $request->query->get('userId'); // récupère ?userId=5
+          $userId = $request->query->get('userId'); 
+          $nameFilter = $request->query->get('nameFilter'); 
+          $orderByDate = $request->query->get('orderByDate'); 
 
             if (!$userId) {
                 return new JsonResponse([
@@ -47,7 +49,7 @@ class ProfileController extends AbstractController
             $account = $accountRepo->findByUserId($userId);
             $financial = $financialRepo->findByUserId($userId);
             $professional = $employRepo->findByUserId($userId);
-            $document = $document->findByUserId($userId);
+            $document = $document->findByUserId($userId, $nameFilter, $orderByDate);
 
             if (!$account) {
                 return new JsonResponse([

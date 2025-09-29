@@ -19,14 +19,28 @@ class DocumentRepository extends ServiceEntityRepository
    /**
      * Récupérer tous les documents d'un utilisateur
      */
-    public function findByUserId(int $userId): array
+   public function findByUserId(
+    int $userId,
+    ?string $nameFilter = null,   
+    ?string $orderByDate = 'ASC' 
+    ): array
     {
-        return $this->createQueryBuilder('d')
+        $qb = $this->createQueryBuilder('d')
             ->where('d.users = :userId')
-            ->setParameter('userId', $userId)
-            ->getQuery()
-            ->getResult();
+            ->setParameter('userId', $userId);
+
+        // Filtre sur le nom si fourni
+        if ($nameFilter) {
+            $qb->andWhere('d.name LIKE :name')
+            ->setParameter('name', '%' . $nameFilter . '%');
+        }
+
+        // Tri sur la date
+        $qb->orderBy('d.date', $orderByDate);
+
+        return $qb->getQuery()->getResult();
     }
+
 
     /**
      * Récupérer un seul document avec userId + documentId

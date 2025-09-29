@@ -41,9 +41,9 @@ class DocumentFundController extends AbstractController
 
        $slugToCategoryId = [
             'statements'       => 1,
-            'factssheets'      => 2,
+            'factsheets'       => 2,
             'contract-notes'   => 3,
-            'devidend-notices' => 4,
+            'dividend-notices' => 4,
         ];
 
         if (!isset($slugToCategoryId[$category])) {
@@ -83,7 +83,7 @@ class DocumentFundController extends AbstractController
                     'path'       => $doc->getPath(),
                     'fund_name'  => $doc->getFundId() ? $doc->getFundId()->getFundName() : null,
                     'category'   => $doc->getCategoryId() ? $doc->getCategoryId()->getCategoryName() : null,
-                    'created_at' => $doc->getCreatedAt()?->format('d-M-Y'),
+                    'date'       => $doc->getCreatedAt()?->format('d-M-Y'),
                 ];
             }, $documents);
 
