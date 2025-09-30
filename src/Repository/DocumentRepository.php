@@ -21,8 +21,8 @@ class DocumentRepository extends ServiceEntityRepository
      */
    public function findByUserId(
     int $userId,
-    ?string $nameFilter = null,   
-    ?string $orderByDate = 'ASC' 
+    ?string $searchName = null,   
+    ?string $sortBy = 'ASC' 
     ): array
     {
         $qb = $this->createQueryBuilder('d')
@@ -30,13 +30,13 @@ class DocumentRepository extends ServiceEntityRepository
             ->setParameter('userId', $userId);
 
         // Filtre sur le nom si fourni
-        if ($nameFilter) {
+        if ($searchName) {
             $qb->andWhere('d.name LIKE :name')
-            ->setParameter('name', '%' . $nameFilter . '%');
+            ->setParameter('name', '%' . $searchName . '%');
         }
 
         // Tri sur la date
-        $qb->orderBy('d.date', $orderByDate);
+        $qb->orderBy('d.date', $sortBy);
 
         return $qb->getQuery()->getResult();
     }
