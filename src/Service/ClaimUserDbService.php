@@ -550,7 +550,7 @@ class ClaimUserDbService
         $stmt = $this->connection->prepare($sql);
         $stmt->bindValue(1, $params['p_user_id']);
         
-        return $stmt->executeQuery()->fetchAssociative();
+        return $stmt->executeQuery()->fetchAllAssociative();
     }
 
 }
