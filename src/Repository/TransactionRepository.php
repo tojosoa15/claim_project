@@ -105,6 +105,20 @@ class TransactionRepository extends ServiceEntityRepository
                ->setParameter('currency', $params['searchCurrency']);
         }
 
+        // Filtre par date si startDate et endDate sont définies
+        if (!empty($params['startDate']) && !empty($params['endDate'])) {
+            $startDate = new \DateTime($params['startDate']);
+            $endDate   = new \DateTime($params['endDate']);
+            
+            // On inclut la fin de journée pour être sûr de récupérer toutes les transactions du jour de fin
+            $endDate->setTime(23, 59, 59);
+
+            $qb->andWhere('t.transactionDate BETWEEN :startDate AND :endDate')
+            ->setParameter('startDate', $startDate)
+            ->setParameter('endDate', $endDate);
+        }
+
+
         // Tri
         if (!empty($params['sortBy'])) {
             [$field, $order] = explode('-', $params['sortBy']);

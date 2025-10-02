@@ -119,6 +119,16 @@ use Doctrine\ORM\Mapping as ORM;
                     required: false,
                     schema: ['type' => 'string']
                 ),
+                'startDate' => new QueryParameter(
+                    description: 'Date de début au format YYYY-MM-DD',
+                    required: true,
+                    schema: ['type' => 'string']
+                ),
+                'endDate' => new QueryParameter(
+                    description: 'Date de fin au format YYYY-MM-DD',
+                    required: true,
+                    schema: ['type' => 'string']
+                ),
             ]
         ),
     ],
